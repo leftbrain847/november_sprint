@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: a sticky console header (status + tabs) over one scrolling view; cards stack to one column on phones. */
+:root{
+  --bg:#f3f4f6; --surface:#ffffff; --ink:#15181d; --muted:#5e6672; --line:#dde1e7; --accent:#2457c5;
+  --crit:#c2261b; --high:#d0660b; --med:#b38b00; --low:#8b939e; --good:#1d7f4b;
+  --sunk:#eceef2; --chip:#e7ebf2;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1216; --surface:#171b21; --ink:#e8ebef; --muted:#9aa3ae; --line:#2a3038; --accent:#7aa2ff;
+  --crit:#ff6b5e; --high:#ff9a45; --med:#e7c14b; --low:#7d8691; --good:#4cc38a; --sunk:#12161b; --chip:#222833; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1216; --surface:#171b21; --ink:#e8ebef; --muted:#9aa3ae; --line:#2a3038; --accent:#7aa2ff;
+  --crit:#ff6b5e; --high:#ff9a45; --med:#e7c14b; --low:#7d8691; --good:#4cc38a; --sunk:#12161b; --chip:#222833; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--font-body);padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+h1,h2,h3{text-wrap:balance;margin:0}
+h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:22px 0 10px}
+a{color:var(--accent)}
+.mono,code{font-family:var(--font-mono);font-size:12.5px}
+code{background:var(--chip);padding:1px 5px;border-radius:5px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top) + 10px) 16px 0}
+.headrow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.asof{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.mode{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--muted)}
+.mode.live{color:var(--good)}
+nav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 0}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:none;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 14px var(--font-body);cursor:pointer}
+nav button .n{color:var(--muted);font-variant-numeric:tabular-nums;margin-left:4px}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+nav button[aria-selected="true"] .n{color:var(--bg);opacity:.75}
+main{max-width:880px;margin:0 auto;padding:6px 16px 80px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (min-width:640px){.tiles{grid-template-columns:repeat(6,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 6px;display:grid;gap:2px}
+.tile .k{font-size:11.5px;color:var(--muted)}
+.tile .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .d{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:15px}
+.tile.alert .v{color:var(--crit)}
+svg.spark{width:100%;height:26px;display:block}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}
+.card>.top{display:grid;grid-template-columns:4px 1fr;gap:0}
+.stripe{background:var(--low)}
+.stripe.critical{background:var(--crit)}.stripe.high{background:var(--high)}.stripe.medium{background:var(--med)}.stripe.low{background:var(--low)}
+.body{padding:12px 12px 10px;display:grid;gap:6px;min-width:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.title{font-weight:600;overflow-wrap:anywhere}
+.sub{color:var(--muted);font-size:13px}
+.why{font-size:13.5px}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--ink);white-space:nowrap}
+.pill.over{background:var(--crit);color:#fff}
+.pill.pending{outline:1px dashed var(--accent);background:transparent;color:var(--accent)}
+.pill.pass{color:var(--good)}.pill.warn{color:var(--med)}.pill.fail{color:var(--crit)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--low)}
+.dot.critical{background:var(--crit)}.dot.high{background:var(--high)}.dot.medium{background:var(--med)}.dot.low{background:var(--low)}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 14px var(--font-body);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,nav button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details>summary{cursor:pointer;list-style:none;min-height:44px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13.5px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";font-size:11px}
+details[open]>summary::before{content:"▾"}
+.items{display:grid;gap:0;border-top:1px solid var(--line)}
+.item{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+pre{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap;font:12.5px/1.45 var(--font-mono);margin:0;max-height:260px;overflow:auto}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 6px}
+.controls input{grid-column:1/-1}
+input,select,textarea{min-height:44px;width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:15px var(--font-body)}
+textarea{min-height:64px;resize:vertical}
+.count{color:var(--muted);font-size:12.5px;margin:6px 0}
+.grid2{display:grid;gap:8px}
+@media (min-width:640px){.grid2{grid-template-columns:1fr 1fr}}
+.area{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:4px;text-decoration:none;color:inherit;min-height:44px}
+.area .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.area .v{font-weight:600}
+.dist{display:flex;height:28px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.dist span{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums}
+.repo>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.repo{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:6px 0;cursor:pointer;width:100%;text-align:left;color:inherit;font:inherit}
+.grade{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:18px;background:var(--chip)}
+.grade.A{color:var(--good)}.grade.B{color:var(--accent)}.grade.C{color:var(--med)}.grade.D{color:var(--high)}.grade.F{color:var(--crit)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal .h{font-size:11px;color:var(--muted);text-align:center}
+.cal button{aspect-ratio:1;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:500 13px var(--font-body);font-variant-numeric:tabular-nums;display:grid;place-items:center;position:relative;cursor:default}
+.cal button.has{cursor:pointer;color:#fff;border-color:transparent}
+.cal button.pass{background:var(--good)}.cal button.warn{background:var(--med)}.cal button.fail{background:var(--crit)}.cal button.built{background:var(--chip);color:var(--ink)}
+.cal button.today{outline:2px solid var(--accent);outline-offset:1px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.answer{background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;white-space:pre-wrap}
+.miss{border-left:3px solid var(--crit);padding-left:10px}
+.empty{color:var(--muted);padding:16px 0}
+#toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;max-width:92vw;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+table.plain{border-collapse:collapse;font-size:13.5px;width:100%}
+table.plain td,table.plain th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
+.wrapx{overflow-x:auto}
+</style>
+</head>
+<body>
+<header>
+  <div class="headrow"><h1>Command Center</h1><span class="asof" id="asof"></span><span class="mode" id="mode">read-only</span></div>
+  <nav id="tabs" role="tablist" aria-label="Sections"></nav>
+</header>
+<main id="view" tabindex="-1"></main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+const D = {"demo":true,"generated":"Wed Nov 4 \u00b7 1:47 AM EST","graded":"2026-11-04","owner":"demo","settings":{"category_order":["security","lost-work","reliability","reuse"],"rank_by":"severity","severity_weight":{"critical":40,"high":15,"medium":6,"low":2},"grades":{"A":90,"B":75,"C":55,"D":35},"sla_days":{"critical":2,"high":7,"medium":30,"low":90},"always_surface":{"security":"high"},"sprint":{"start":"2026-11-01","end":"2026-11-30"},"timezone":"America/New_York"},"checks":{"secret-in-tree":{"category":"security","severity":"critical","title":"Secret committed in current files","why":"Anything in the repo is readable by everyone with access, forever. Rotate first, then remove."},"secret-in-history":{"category":"security","severity":"high","title":"Secret in git history (deleted but still readable)","why":"Deleting a file does not remove it from history. Rotation is the fix; rewriting history is optional."},"public-sensitive":{"category":"security","severity":"high","title":"Public repo with credential or environment files","why":"Public repos are indexed by scrapers within minutes; config files are the first thing they read."},"no-lockfile":{"category":"security","severity":"medium","title":"Dependencies not locked","why":"Without a lockfile, every install can pull different (possibly compromised) versions."},"no-dependency-updates":{"category":"security","severity":"low","title":"No automated dependency updates","why":"Dependabot opens PRs when a dependency has a known vulnerability; without it you find out late."},"no-gitignore":{"category":"security","severity":"low","title":"No .gitignore","why":"The most common way secrets and build junk get committed."},"main-is-hollow":{"category":"lost-work","severity":"critical","title":"Default branch is nearly empty; the real work is on a branch","why":"Anyone (including future Claude sessions) opening the repo sees almost nothing. Work that isn't on main is work you'll lose."},"unmerged-stale":{"category":"lost-work","severity":"high","title":"Unmerged branch going cold","why":"Session branches older than two weeks rarely get merged unless someone decides to."},"unmerged-active":{"category":"lost-work","severity":"medium","title":"Unmerged work in progress","why":"Recent session work not yet on main. Fine for now; merge or close it before it goes cold."},"pending-bot-prs":{"category":"lost-work","severity":"low","title":"Dependency update branches never merged","why":"Bot branches pile up and go stale; each is a skipped security or bug fix."},"todo-debt":{"category":"lost-work","severity":"low","title":"TODO / FIXME notes in code","why":"TODOs are decisions deferred to nobody. Either do them, ticket them, or delete them."},"no-tests":{"category":"reliability","severity":"high","title":"No automated tests","why":"Your daily-ship definition requires a passing test. Without one, nothing proves it still works."},"no-ci":{"category":"reliability","severity":"medium","title":"No CI","why":"Tests that only run when someone remembers are tests that stop running."},"ci-skips-tests":{"category":"reliability","severity":"medium","title":"CI exists but doesn't run the tests","why":"A green check that doesn't test anything is worse than no check."},"no-readme-run":{"category":"reliability","severity":"medium","title":"README doesn't say how to run it","why":"Running from a clean clone requires knowing the commands. Future-you is a stranger."},"no-agent-guide":{"category":"reliability","severity":"low","title":"No CLAUDE.md","why":"Every session starts cold without it \u2014 conventions, commands and decisions get re-discovered each time."},"empty-repo":{"category":"reuse","severity":"medium","title":"Empty repo","why":"Empty repos are noise in every list you look at."},"duplicate-lineage":{"category":"reuse","severity":"medium","title":"Duplicate of another repo","why":"Parallel copies drift; fixes land in one and not the other."},"copied-skill":{"category":"reuse","severity":"medium","title":"Skill copied instead of referenced","why":"Copies of shared machinery go stale; your rule is skills are referenced, not copied."},"public-no-license":{"category":"reuse","severity":"low","title":"Public repo without a license","why":"Without a license nobody (including employers reviewing your portfolio) can legally reuse it."}},"repos":{"lantern_maze":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":61,"branches":5,"files":57,"active":true,"theme":"games","tags":["maze","canvas"],"what":"Lantern-lit maze you solve by sound","portfolio":false},"tide_tracker":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":69,"branches":5,"files":15,"active":true,"theme":"data","tags":["noaa","charts"],"what":"Tide charts for a few favorite beaches","portfolio":false},"bread_ratio":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":69,"branches":4,"files":43,"active":true,"theme":"personal","tags":["baking","calculator"],"what":"Baker's percentage calculator","portfolio":false},"chess_clock":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":27,"branches":1,"files":31,"active":true,"theme":"tools","tags":["timer","pwa"],"what":"Chess clock with increment presets","portfolio":false},"star_map":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":42,"branches":2,"files":8,"active":false,"theme":"learning","tags":["astronomy","three.js"],"what":"Tonight's sky, rotated to where you stand","portfolio":false},"budget_bot":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":9,"branches":5,"files":28,"active":true,"theme":"data","tags":["finance","sqlite"],"what":"Monthly budget roll-up from CSV exports","portfolio":false},"haiku_lab":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":24,"branches":5,"files":3,"active":false,"theme":"content","tags":["poetry","syllables"],"what":"Syllable counter and haiku drafts","portfolio":false},"pixel_garden":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":11,"branches":1,"files":15,"active":true,"theme":"games","tags":["idle","pixel-art"],"what":"Idle garden that grows while you're away","portfolio":false},"metro_eta":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":63,"branches":3,"files":31,"active":false,"theme":"tools","tags":["transit","api"],"what":"Next-train board for one station","portfolio":false},"recipe_scaler":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":33,"branches":3,"files":34,"active":true,"theme":"personal","tags":["cooking"],"what":"Scale a recipe to any number of servings","portfolio":false},"focus_timer":{"visibility":"private","fork":false,"empty":false,"default":"main","work_branch":"main","default_commits":14,"branches":4,"files":44,"active":true,"theme":"tools","tags":["pomodoro"],"what":"Pomodoro timer with a daily streak","portfolio":false},"card_vault":{"visibility":"private","fork":false,"empty":true,"default":"main","work_branch":"main","default_commits":56,"branches":5,"files":56,"active":false,"theme":"personal","tags":["collecting","catalog"],"what":"Catalog for a card collection","portfolio":false}},"grades":{"lantern_maze":{"score":77,"grade":"B"},"tide_tracker":{"score":88,"grade":"B"},"bread_ratio":{"score":100,"grade":"A"},"chess_clock":{"score":100,"grade":"A"},"star_map":{"score":64,"grade":"C"},"budget_bot":{"score":79,"grade":"B"},"haiku_lab":{"score":96,"grade":"A"},"pixel_garden":{"score":81,"grade":"B"},"metro_eta":{"score":79,"grade":"B"},"recipe_scaler":{"score":94,"grade":"A"},"focus_timer":{"score":94,"grade":"A"},"card_vault":{"score":94,"grade":"\u2014"}},"findings":[{"id":"lantern_maze/no-tests","code":"2f53f8","repo":"lantern_maze","check":"no-tests","category":"reliability","severity":"high","title":"No automated tests","detail":"No test files or test command found","evidence":[],"why":"Your daily-ship definition requires a passing test. Without one, nothing proves it still works.","prompt":"In lantern_maze: no automated tests. No test files or test command found. Fix it in one small PR.","active":true,"first_seen":"2026-10-23","age":12,"due_in":-5,"overdue":true,"pr":null,"status":"open","in_queue":true},{"id":"lantern_maze/unmerged-active","code":"c04be8","repo":"lantern_maze","check":"unmerged-active","category":"lost-work","severity":"medium","title":"Unmerged work in progress","detail":"3 commits not on `main`, last touched yesterday (Add hint system)","evidence":["claude/hint-system"],"why":"Recent session work not yet on main. Fine for now; merge or close it before it goes cold.","prompt":"In lantern_maze: unmerged work in progress. 3 commits not on `main`, last touched yesterday (Add hint system). Fix it in one small PR.","active":true,"first_seen":"2026-10-28","age":7,"due_in":23,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"lantern_maze/todo-debt","code":"9d61d1","repo":"lantern_maze","check":"todo-debt","category":"lost-work","severity":"low","title":"TODO / FIXME notes in code","detail":"14 TODOs across 6 files","evidence":["src/game.js"],"why":"TODOs are decisions deferred to nobody. Either do them, ticket them, or delete them.","prompt":"In lantern_maze: todo / fixme notes in code. 14 TODOs across 6 files. Fix it in one small PR.","active":true,"first_seen":"2026-10-28","age":7,"due_in":83,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"tide_tracker/no-ci","code":"4c4fe9","repo":"tide_tracker","check":"no-ci","category":"reliability","severity":"medium","title":"No CI","detail":"No workflow runs on push or pull request","evidence":[],"why":"Tests that only run when someone remembers are tests that stop running.","prompt":"In tide_tracker: no ci. No workflow runs on push or pull request. Fix it in one small PR.","active":true,"first_seen":"2026-11-02","age":2,"due_in":28,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"tide_tracker/no-lockfile","code":"3c8dbc","repo":"tide_tracker","check":"no-lockfile","category":"security","severity":"medium","title":"Dependencies not locked","detail":"package.json without a lockfile","evidence":["package.json"],"why":"Without a lockfile, every install can pull different (possibly compromised) versions.","prompt":"In tide_tracker: dependencies not locked. package.json without a lockfile. Fix it in one small PR.","active":true,"first_seen":"2026-10-23","age":12,"due_in":18,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"bread_ratio/no-readme-run","code":"4aa293","repo":"bread_ratio","check":"no-readme-run","category":"reliability","severity":"medium","title":"README doesn't say how to run it","detail":"README has no way to run it","evidence":["README.md"],"why":"Running from a clean clone requires knowing the commands. Future-you is a stranger.","prompt":"In bread_ratio: readme doesn't say how to run it. README has no way to run it. Fix it in one small PR.","active":true,"first_seen":"2026-10-26","age":9,"due_in":21,"overdue":false,"pr":null,"status":"resolved","in_queue":true},{"id":"star_map/no-ci","code":"18b417","repo":"star_map","check":"no-ci","category":"reliability","severity":"medium","title":"No CI","detail":"No workflow runs on push or pull request","evidence":[],"why":"Tests that only run when someone remembers are tests that stop running.","prompt":"In star_map: no ci. No workflow runs on push or pull request. Fix it in one small PR.","active":false,"first_seen":"2026-10-27","age":8,"due_in":22,"overdue":false,"pr":null,"status":"open","in_queue":false},{"id":"star_map/no-tests","code":"004845","repo":"star_map","check":"no-tests","category":"reliability","severity":"high","title":"No automated tests","detail":"No test files or test command found","evidence":[],"why":"Your daily-ship definition requires a passing test. Without one, nothing proves it still works.","prompt":"In star_map: no automated tests. No test files or test command found. Fix it in one small PR.","active":false,"first_seen":"2026-10-23","age":12,"due_in":-5,"overdue":true,"pr":null,"status":"open","in_queue":true},{"id":"star_map/unmerged-stale","code":"9a8de0","repo":"star_map","check":"unmerged-stale","category":"lost-work","severity":"high","title":"Unmerged branch going cold","detail":"5 commits not on `main`, last touched 2026-09-12 (Offline mode)","evidence":["claude/offline-mode"],"why":"Session branches older than two weeks rarely get merged unless someone decides to.","prompt":"In star_map: unmerged branch going cold. 5 commits not on `main`, last touched 2026-09-12 (Offline mode). Fix it in one small PR.","active":false,"first_seen":"2026-10-24","age":11,"due_in":-4,"overdue":true,"pr":null,"status":"open","in_queue":true},{"id":"budget_bot/secret-in-history","code":"ce0cac","repo":"budget_bot","check":"secret-in-history","category":"security","severity":"high","title":"Secret in git history (deleted but still readable)","detail":"A key-like value was committed and later deleted (value never stored here)","evidence":[".env (deleted)"],"why":"Deleting a file does not remove it from history. Rotation is the fix; rewriting history is optional.","prompt":"In budget_bot: secret in git history (deleted but still readable). A key-like value was committed and later deleted (value never stored here). Fix it in one small PR.","active":true,"first_seen":"2026-10-28","age":7,"due_in":0,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"budget_bot/no-ci","code":"bf264b","repo":"budget_bot","check":"no-ci","category":"reliability","severity":"medium","title":"No CI","detail":"No workflow runs on push or pull request","evidence":[],"why":"Tests that only run when someone remembers are tests that stop running.","prompt":"In budget_bot: no ci. No workflow runs on push or pull request. Fix it in one small PR.","active":true,"first_seen":"2026-10-25","age":10,"due_in":20,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"haiku_lab/no-gitignore","code":"53bbd6","repo":"haiku_lab","check":"no-gitignore","category":"security","severity":"low","title":"No .gitignore","detail":"No .gitignore","evidence":[],"why":"The most common way secrets and build junk get committed.","prompt":"In haiku_lab: no .gitignore. No .gitignore. Fix it in one small PR.","active":false,"first_seen":"2026-10-27","age":8,"due_in":82,"overdue":false,"pr":null,"status":"open","in_queue":false},{"id":"haiku_lab/no-agent-guide","code":"6ed660","repo":"haiku_lab","check":"no-agent-guide","category":"reliability","severity":"low","title":"No CLAUDE.md","detail":"No CLAUDE.md or AGENTS.md for agent sessions","evidence":[],"why":"Every session starts cold without it \u2014 conventions, commands and decisions get re-discovered each time.","prompt":"In haiku_lab: no claude.md. No CLAUDE.md or AGENTS.md for agent sessions. Fix it in one small PR.","active":false,"first_seen":"2026-11-03","age":1,"due_in":89,"overdue":false,"pr":null,"status":"open","in_queue":false},{"id":"pixel_garden/no-tests","code":"555c98","repo":"pixel_garden","check":"no-tests","category":"reliability","severity":"high","title":"No automated tests","detail":"No test files or test command found","evidence":[],"why":"Your daily-ship definition requires a passing test. Without one, nothing proves it still works.","prompt":"In pixel_garden: no automated tests. No test files or test command found. Fix it in one small PR.","active":true,"first_seen":"2026-11-01","age":3,"due_in":4,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"pixel_garden/no-dependency-updates","code":"dadf52","repo":"pixel_garden","check":"no-dependency-updates","category":"security","severity":"low","title":"No automated dependency updates","detail":"No Dependabot or Renovate config","evidence":[],"why":"Dependabot opens PRs when a dependency has a known vulnerability; without it you find out late.","prompt":"In pixel_garden: no automated dependency updates. No Dependabot or Renovate config. Fix it in one small PR.","active":true,"first_seen":"2026-10-26","age":9,"due_in":81,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"pixel_garden/pending-bot-prs","code":"d1ed80","repo":"pixel_garden","check":"pending-bot-prs","category":"lost-work","severity":"low","title":"Dependency update branches never merged","detail":"2 Dependabot PRs open over 14 days","evidence":["#4","#6"],"why":"Bot branches pile up and go stale; each is a skipped security or bug fix.","prompt":"In pixel_garden: dependency update branches never merged. 2 Dependabot PRs open over 14 days. Fix it in one small PR.","active":true,"first_seen":"2026-11-04","age":0,"due_in":90,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"metro_eta/unmerged-stale","code":"ccdc9a","repo":"metro_eta","check":"unmerged-stale","category":"lost-work","severity":"high","title":"Unmerged branch going cold","detail":"5 commits not on `main`, last touched 2026-09-12 (Offline mode)","evidence":["claude/offline-mode"],"why":"Session branches older than two weeks rarely get merged unless someone decides to.","prompt":"In metro_eta: unmerged branch going cold. 5 commits not on `main`, last touched 2026-09-12 (Offline mode). Fix it in one small PR.","active":false,"first_seen":"2026-10-26","age":9,"due_in":-2,"overdue":true,"pr":null,"status":"open","in_queue":true},{"id":"metro_eta/no-readme-run","code":"b3dd0e","repo":"metro_eta","check":"no-readme-run","category":"reliability","severity":"medium","title":"README doesn't say how to run it","detail":"README has no way to run it","evidence":["README.md"],"why":"Running from a clean clone requires knowing the commands. Future-you is a stranger.","prompt":"In metro_eta: readme doesn't say how to run it. README has no way to run it. Fix it in one small PR.","active":false,"first_seen":"2026-11-01","age":3,"due_in":27,"overdue":false,"pr":null,"status":"resolved","in_queue":false},{"id":"metro_eta/no-ci","code":"00fcd8","repo":"metro_eta","check":"no-ci","category":"reliability","severity":"medium","title":"No CI","detail":"No workflow runs on push or pull request","evidence":[],"why":"Tests that only run when someone remembers are tests that stop running.","prompt":"In metro_eta: no ci. No workflow runs on push or pull request. Fix it in one small PR.","active":false,"first_seen":"2026-10-27","age":8,"due_in":22,"overdue":false,"pr":null,"status":"open","in_queue":false},{"id":"recipe_scaler/no-lockfile","code":"b020bd","repo":"recipe_scaler","check":"no-lockfile","category":"security","severity":"medium","title":"Dependencies not locked","detail":"package.json without a lockfile","evidence":["package.json"],"why":"Without a lockfile, every install can pull different (possibly compromised) versions.","prompt":"In recipe_scaler: dependencies not locked. package.json without a lockfile. Fix it in one small PR.","active":true,"first_seen":"2026-11-04","age":0,"due_in":30,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"focus_timer/ci-skips-tests","code":"a0d776","repo":"focus_timer","check":"ci-skips-tests","category":"reliability","severity":"medium","title":"CI exists but doesn't run the tests","detail":"CI runs build but not tests","evidence":[".github/workflows/ci.yml"],"why":"A green check that doesn't test anything is worse than no check.","prompt":"In focus_timer: ci exists but doesn't run the tests. CI runs build but not tests. Fix it in one small PR.","active":true,"first_seen":"2026-10-31","age":4,"due_in":26,"overdue":false,"pr":null,"status":"open","in_queue":true},{"id":"card_vault/empty-repo","code":"f3485d","repo":"card_vault","check":"empty-repo","category":"reuse","severity":"medium","title":"Empty repo","detail":"Repository has no commits","evidence":[],"why":"Empty repos are noise in every list you look at.","prompt":"In card_vault: empty repo. Repository has no commits. Fix it in one small PR.","active":false,"first_seen":"2026-11-03","age":1,"due_in":29,"overdue":false,"pr":null,"status":"open","in_queue":false}],"decisions":{"9d61d1":{"status":"snoozed","finding":"lantern_maze/todo-debt","first_seen":"2026-10-28"},"3c8dbc":{"status":"approved","finding":"tide_tracker/no-lockfile","first_seen":"2026-10-23"},"4aa293":{"status":"resolved","finding":"bread_ratio/no-readme-run","first_seen":"2026-10-26","resolved_on":"2026-11-04"},"b3dd0e":{"status":"resolved","finding":"metro_eta/no-readme-run","first_seen":"2026-11-01","resolved_on":"2026-11-04"},"b020bd":{"status":"approved","finding":"recipe_scaler/no-lockfile","first_seen":"2026-11-04"}},"metrics":[{"date":"2026-10-21","open":"34","critical":"0","high":"6","medium":"16","low":"12","queue":"19","in_review":"0","overdue":"4","resolved_total":"3","resolved_7d":"1","avg_score":"81.6","repos":"12"},{"date":"2026-10-22","open":"33","critical":"0","high":"6","medium":"15","low":"12","queue":"19","in_review":"0","overdue":"4","resolved_total":"4","resolved_7d":"2","avg_score":"82.0","repos":"12"},{"date":"2026-10-23","open":"32","critical":"0","high":"6","medium":"15","low":"11","queue":"19","in_review":"0","overdue":"4","resolved_total":"5","resolved_7d":"3","avg_score":"82.4","repos":"12"},{"date":"2026-10-24","open":"31","critical":"0","high":"6","medium":"14","low":"11","queue":"18","in_review":"0","overdue":"4","resolved_total":"6","resolved_7d":"4","avg_score":"82.8","repos":"12"},{"date":"2026-10-25","open":"30","critical":"0","high":"6","medium":"14","low":"10","queue":"18","in_review":"0","overdue":"4","resolved_total":"7","resolved_7d":"5","avg_score":"83.2","repos":"12"},{"date":"2026-10-26","open":"29","critical":"0","high":"6","medium":"13","low":"10","queue":"18","in_review":"0","overdue":"4","resolved_total":"8","resolved_7d":"6","avg_score":"83.6","repos":"12"},{"date":"2026-10-27","open":"28","critical":"0","high":"6","medium":"13","low":"9","queue":"17","in_review":"0","overdue":"4","resolved_total":"9","resolved_7d":"7","avg_score":"84.0","repos":"12"},{"date":"2026-10-28","open":"27","critical":"0","high":"6","medium":"12","low":"9","queue":"17","in_review":"0","overdue":"4","resolved_total":"10","resolved_7d":"7","avg_score":"84.4","repos":"12"},{"date":"2026-10-29","open":"26","critical":"0","high":"6","medium":"12","low":"8","queue":"17","in_review":"0","overdue":"4","resolved_total":"11","resolved_7d":"7","avg_score":"84.8","repos":"12"},{"date":"2026-10-30","open":"25","critical":"0","high":"6","medium":"11","low":"8","queue":"16","in_review":"0","overdue":"4","resolved_total":"12","resolved_7d":"7","avg_score":"85.2","repos":"12"},{"date":"2026-10-31","open":"24","critical":"0","high":"6","medium":"11","low":"7","queue":"16","in_review":"0","overdue":"4","resolved_total":"13","resolved_7d":"7","avg_score":"85.6","repos":"12"},{"date":"2026-11-01","open":"23","critical":"0","high":"6","medium":"10","low":"7","queue":"16","in_review":"0","overdue":"4","resolved_total":"14","resolved_7d":"7","avg_score":"86.0","repos":"12"},{"date":"2026-11-02","open":"22","critical":"0","high":"6","medium":"10","low":"6","queue":"15","in_review":"0","overdue":"4","resolved_total":"15","resolved_7d":"7","avg_score":"86.4","repos":"12"},{"date":"2026-11-03","open":"21","critical":"0","high":"6","medium":"9","low":"6","queue":"15","in_review":"0","overdue":"4","resolved_total":"16","resolved_7d":"7","avg_score":"86.8","repos":"12"},{"date":"2026-11-04","open":"20","critical":"0","high":"6","medium":"9","low":"5","queue":"15","in_review":"0","overdue":"4","resolved_total":"17","resolved_7d":"7","avg_score":"87.2","repos":"12"}],"toolbox":[{"kind":"workflow","name":"ci","repo":"chess_clock","url":"#demo"},{"kind":"skill","name":"release-notes","repo":"pixel_garden","url":"#demo"}],"sprint":[{"name":"2026-11-01 - Lantern Maze","date":"2026-11-01","project":"Lantern Maze","repo":"lantern_maze","snapshot":"#demo","live":"#demo","file":"Lantern Maze.html","build_path":null,"manual":"passed","manual_on":"2026-11-04","auto_status":"pass","auto_issues":[],"auto_note":null,"viewed_as":"artifact"},{"name":"2026-11-01 - Tide Tracker","date":"2026-11-01","project":"Tide Tracker","repo":"tide_tracker","snapshot":"#demo","live":"#demo","file":"Tide Tracker.html","build_path":null,"manual":"passed","manual_on":"2026-11-04","auto_status":"pass","auto_issues":[],"auto_note":null,"viewed_as":"artifact"},{"name":"2026-11-02 - Bread Ratio","date":"2026-11-02","project":"Bread Ratio","repo":"bread_ratio","snapshot":"#demo","live":"#demo","file":"Bread Ratio.html","build_path":null,"manual":"passed","manual_on":"2026-11-04","auto_status":"pass","auto_issues":[],"auto_note":null,"viewed_as":"artifact"},{"name":"2026-11-03 - Chess Clock","date":"2026-11-03","project":"Chess Clock","repo":"chess_clock","snapshot":"#demo","live":"#demo","file":"Chess Clock.html","build_path":null,"manual":"passed","manual_on":"2026-11-04","auto_status":"pass","auto_issues":[],"auto_note":null,"viewed_as":"artifact"},{"name":"2026-11-04 - Pixel Garden","date":"2026-11-04","project":"Pixel Garden","repo":"pixel_garden","snapshot":"#demo","live":"#demo","file":"Pixel Garden.html","build_path":null,"manual":"passed","manual_on":"2026-11-04","auto_status":"pass","auto_issues":[],"auto_note":null,"viewed_as":"artifact"}],"started":[{"date":"2026-11-01","repo":"lantern_maze"},{"date":"2026-11-01","repo":"tide_tracker"},{"date":"2026-11-02","repo":"bread_ratio"},{"date":"2026-11-03","repo":"chess_clock"},{"date":"2026-11-04","repo":"pixel_garden"}],"uat_run":"2026-11-04","uat_checks":{"js-errors":{"severity":"critical","title":"JavaScript errors on load"},"blank-render":{"severity":"critical","title":"Page renders blank","min_text_chars":20},"interaction-errors":{"severity":"high","title":"Errors after tapping controls"},"console-errors":{"severity":"high","title":"Console errors"},"failed-requests":{"severity":"high","title":"Resources fail to load"},"horizontal-overflow":{"severity":"high","title":"Wider than a phone screen","tolerance_px":2},"small-tap-targets":{"severity":"medium","title":"Tap targets under 44px","min_px":44,"allow":2},"external-hosts":{"severity":"medium","title":"Loads from hosts outside the allowlist"},"no-viewport-meta":{"severity":"medium","title":"No mobile viewport tag"},"slow-load":{"severity":"low","title":"Slow to load","max_ms":3000},"title-mismatch":{"severity":"low","title":"Page title doesn't match the dated name"}}};
+const S = D.settings || {};
+const SEV = {critical: 4, high: 3, medium: 2, low: 1};
+const CAT = {security: "Security", "lost-work": "Lost work", reliability: "Reliability", reuse: "Reuse & sprawl"};
+const CAT_SHORT = {security: "Sec", "lost-work": "Lost", reliability: "Rel", reuse: "Reuse"};
+const VERB = {"main-is-hollow": "merge stranded work into main", "no-gitignore": "add .gitignore", "no-tests": "add tests", "no-ci": "add CI"};
+const TABS = [["now", "Now"], ["queue", "Queue"], ["lost", "Lost work"], ["health", "Health"], ["sprint", "Sprint"],
+  ["toolbox", "Toolbox"], ["cleanup", "Cleanup"], ["portfolio", "Portfolio"], ["reports", "Reports"], ["guide", "Guide"]];
+const TODAY = (D.graded || "").slice(0, 10);
+const state = {tab: "now", q: "", cat: "all", sev: "all", scope: "queue", sort: "rank", report: null, hq: "", hsort: "score",
+  dec: {}, uat: {}, db: null, sample: null, canWrite: false, answers: {}};
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+// Demo (D.demo): made-up data, links go nowhere, taps save in this tab only.
+const ghRepo = r => D.demo ? "#demo" : `https://github.com/${D.owner}/${r}`;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 2600); }
+
+/* ---------- ranking and status ---------- */
+const catIdx = c => Math.max(0, (S.category_order || []).indexOf(c));
+function rankKey(f) {
+  const sev = -SEV[f.severity], cat = catIdx(f.category), over = f.overdue ? 0 : 1;
+  return S.rank_by === "category" ? [cat, sev, over, f.repo] : [sev, over, cat, f.repo];
+}
+const cmp = (a, b) => { const x = rankKey(a), y = rankKey(b); for (let i = 0; i < x.length; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; };
+function local(f) { const d = state.dec[f.code]; if (!d || d.synced) return null; if (d.action === "snooze" && d.until && d.until <= TODAY) return null; return d; }
+function eff(f) { const l = local(f); return l ? "pending-" + l.action : f.status; }
+const isOpen = f => eff(f) === "open";
+const inQueue = f => f.in_queue && isOpen(f);
+const queue = () => D.findings.filter(inQueue).sort(cmp);
+const review = () => D.findings.filter(f => f.status === "approved");
+const pending = () => D.findings.filter(f => local(f));
+const lostWork = () => D.findings.filter(f => f.category === "lost-work" && f.check !== "todo-debt" && (isOpen(f) || f.status === "approved")).sort(cmp);
+const cleanup = () => D.findings.filter(f => f.category === "reuse" && isOpen(f)).sort(cmp);
+function groups(list) { const m = new Map(); for (const f of list.slice().sort(cmp)) { if (!m.has(f.check)) m.set(f.check, []); m.get(f.check).push(f); } return [...m.entries()]; }
+function dueText(fs) {
+  const q = fs.filter(f => f.due_in !== null && f.due_in !== undefined); if (!q.length) return "";
+  const worst = Math.min(...q.map(f => +f.due_in)), oldest = Math.max(...fs.map(f => +f.age || 0));
+  return (worst < 0 ? `overdue ${-worst}d` : `due in ${worst}d`) + ` · open ${oldest}d`;
+}
+
+/* ---------- charts ---------- */
+function spark(key, better = "down") {
+  const pts = D.metrics.map(r => +r[key]).filter(v => !isNaN(v)).slice(-14);
+  const W = 100, H = 26, pad = 3;
+  if (pts.length < 2) return {svg: `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" y1="${H - pad}" x2="${W}" y2="${H - pad}" stroke="var(--line)" stroke-width="1"/><circle cx="${W - pad}" cy="${H - pad}" r="2.5" fill="var(--accent)"/></svg>`, delta: "trend from day 2"};
+  const lo = Math.min(...pts), hi = Math.max(...pts), span = hi - lo || 1;
+  const xy = pts.map((v, i) => [pad + i * (W - 2 * pad) / (pts.length - 1), H - pad - (v - lo) / span * (H - 2 * pad)]);
+  const line = xy.map(p => p.map(n => n.toFixed(1)).join(",")).join(" ");
+  const area = `${pad},${H} ${line} ${W - pad},${H}`;
+  const d = pts[pts.length - 1] - pts[0], good = better === "down" ? d < 0 : d > 0;
+  const color = d === 0 ? "var(--muted)" : good ? "var(--good)" : "var(--high)";
+  const [ex, ey] = xy[xy.length - 1];
+  return {svg: `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><polygon points="${area}" fill="${color}" opacity=".12"/><polyline points="${line}" fill="none" stroke="${color}" stroke-width="1.6" vector-effect="non-scaling-stroke"/><circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="2.5" fill="${color}"/></svg>`,
+    delta: `${d > 0 ? "+" : ""}${+d.toFixed(1)} over ${pts.length} days`};
+}
+
+/* ---------- decisions (db) ---------- */
+async function decide(fs, action) {
+  if (D.demo) {
+    for (const f of fs) state.dec[f.code] = {action, finding: f.id, repo: f.repo, check: f.check, at: new Date().toISOString()};
+    toast(`Demo: ${action === "approve" ? "approved" : action === "dismiss" ? "dismissed" : "snoozed"} ${fs.length}. Saved in this tab only.`); render(); return;
+  }
+  if (!state.db || !state.canWrite) { toast("Read-only here. Open the artifact in the Claude app to decide."); return; }
+  const until = action === "snooze" ? new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10) : null;
+  let n = 0;
+  for (const f of fs) {
+    try {
+      await state.db.doc("decisions/" + f.code).set({action, until, finding: f.id, repo: f.repo, check: f.check, at: new Date().toISOString(), synced: false});
+      n++;
+    } catch (e) {
+      if (e && e.code === "invalid_argument") { state.canWrite = false; setMode(); }
+      toast("Couldn't save: " + (e && e.code || "error")); break;
+    }
+  }
+  if (n) toast(`${action === "approve" ? "Approved" : action === "dismiss" ? "Dismissed" : "Snoozed 7 days"}: ${n} · Claude picks this up next session`);
+}
+async function undo(code) { if (D.demo) { delete state.dec[code]; toast("Demo: undone"); render(); return; } if (!state.db) return; try { await state.db.doc("decisions/" + code).delete(); toast("Undone"); } catch (e) { toast("Couldn't undo"); } }
+async function saveUat(name, verdict) {
+  if (D.demo) { state.uat[name.replace(/[^A-Za-z0-9_\-.]+/g, "_")] = {name, verdict, at: new Date().toISOString()}; toast(`Demo: UAT ${verdict}, this tab only`); render(); return; }
+  if (!state.db || !state.canWrite) { toast("Read-only here."); return; }
+  const id = name.replace(/[^A-Za-z0-9_\-.]+/g, "_");
+  const note = ($(`[data-note="${CSS.escape(id)}"]`) || {}).value || "";
+  try { await state.db.doc("uat/" + id).set({name, verdict, note, at: new Date().toISOString()}); toast(`UAT ${verdict} saved`); }
+  catch (e) { toast("Couldn't save: " + (e && e.code || "error")); }
+}
+
+/* ---------- ask Claude (sample) ---------- */
+async function ask(key, prompt) {
+  if (D.demo) { state.answers[key] = "In the real Command Center, Claude answers here, using the finding and its repo. This demo has no Claude attached."; paintAnswer(key); return; }
+  if (!state.sample) { toast("Ask Claude isn't available in this view."); return; }
+  state.answers[key] = "Thinking…"; paintAnswer(key);
+  try {
+    const r = await state.sample(prompt, {modelTier: "quick", onText: ({text}) => { state.answers[key] = text; paintAnswer(key); }});
+    state.answers[key] = r.text; paintAnswer(key);
+  } catch (e) { state.answers[key] = e && e.code === "rate_limited" ? "Busy right now. Try again in a minute." : "Couldn't get an answer here."; paintAnswer(key); }
+}
+function paintAnswer(key) { const el = document.getElementById("ans-" + key); if (el) { el.hidden = false; el.textContent = state.answers[key]; } }
+function groupPrompt(kind, check, fs) {
+  const f0 = fs[0], list = fs.map(f => `- ${f.repo}: ${f.detail || ""} (${(f.evidence || []).slice(0, 3).join(", ")})`).join("\n");
+  const head = `You advise a solo developer reviewing findings from an automated code-health check. Be concrete and brief (under 120 words), plain text, no headings.\nFinding: ${f0.title} [${f0.severity}, ${f0.category}]\nWhy it matters: ${f0.why}\nRepos affected:\n${list}\nFix prompt that would be run: ${f0.prompt}\n`;
+  return kind === "size" ? head + "\nEstimate the effort per repo (minutes) and total, name the riskiest repo, and say whether to batch it."
+    : head + "\nExplain what the fix PR will change and what a reviewer should check before merging.";
+}
+function twentyPrompt() {
+  const q = groups(queue()).slice(0, 8).map(([c, fs]) => `- ${fs[0].title} · ${fs.length} repo(s) [${fs[0].severity}] · ${dueText(fs)} · repos: ${fs.map(f => f.repo).join(", ")}`).join("\n");
+  return `You help a solo developer pick work. They have 20 minutes. Their priority: severity first, then ${(S.category_order || []).join(" > ")}; overdue first. Queue:\n${q}\n\nPick 1-2 items that fit in 20 minutes with the most risk reduced. Say why in two sentences and give the exact phrase to tell Claude (e.g. "approve no-ci"). Plain text, under 90 words.`;
+}
+
+/* ---------- pieces ---------- */
+function decisionButtons(fs, scope) {
+  const dis = D.demo || (state.db && state.canWrite) ? "" : " disabled";
+  const label = fs.length > 1 ? ` all ${fs.length}` : "";
+  return `<div class="btns"><button class="btn primary" data-act="approve" data-scope="${scope}"${dis}>Approve${label}</button><button class="btn" data-act="snooze" data-scope="${scope}"${dis}>Snooze 7d</button><button class="btn ghost" data-act="dismiss" data-scope="${scope}"${dis}>Dismiss</button></div>`;
+}
+function groupCard(check, fs, open = false) {
+  const f0 = fs[0], over = fs.some(f => f.overdue), due = dueText(fs.filter(f => f.in_queue));
+  const scope = "g:" + check + ":" + fs.map(f => f.code).join(",");
+  const who = fs.length === 1 ? fs[0].repo : `${fs.length} repos`;
+  const key = "g-" + check;
+  return `<article class="card"><div class="top"><div class="stripe ${f0.severity}"></div><div class="body">
+    <div class="row"><span class="title">${esc(f0.title)}</span><span class="pill">${esc(who)}</span>${over ? '<span class="pill over">overdue</span>' : ""}</div>
+    <div class="sub">${esc(CAT[f0.category])} · ${esc(f0.severity)}${due ? " · " + esc(due) : ""}</div>
+    <div class="why">${esc(f0.why)}</div>
+    ${decisionButtons(fs, scope)}
+    <details${open ? " open" : ""}><summary>${fs.length} item${fs.length > 1 ? "s" : ""} · prompt · ask Claude</summary>
+      <div class="items">${fs.map(f => `<div class="item"><div class="row"><button class="btn ghost" data-report="${esc(f.repo)}">${esc(f.repo)}</button><code>${esc(f.code)}</code>${f.detail && fs.length > 1 ? `<span class="sub">${esc(f.detail.slice(0, 80))}</span>` : ""}</div></div>`).join("")}</div>
+      <pre>${esc(f0.prompt)}</pre>
+      <div class="btns"><button class="btn" data-copy="${esc(f0.code)}">Copy prompt</button><button class="btn" data-ask="size" data-check="${esc(check)}">How big is this?</button><button class="btn" data-ask="explain" data-check="${esc(check)}">Explain for PR review</button></div>
+      <div class="answer" id="ans-${esc(key)}-size" hidden></div><div class="answer" id="ans-${esc(key)}-explain" hidden></div>
+    </details></div></div></article>`;
+}
+function tile(label, key, value, better, alert) {
+  const s = spark(key, better);
+  return `<div class="tile${alert ? " alert" : ""}"><span class="k">${label}</span><span class="v">${esc(value)}</span>${s.svg}<span class="d">${esc(s.delta)}</span></div>`;
+}
+
+/* ---------- views ---------- */
+const V = {};
+V.now = () => {
+  const m = D.metrics[D.metrics.length - 1] || {}, q = queue(), gs = groups(q);
+  const rv = review(), pd = pending();
+  const overdue = q.filter(f => f.overdue).length;
+  let h = `<h2>Today</h2><div class="tiles">${tile("Queue", "queue", q.length)}${tile("Critical", "critical", m.critical ?? 0, "down", +m.critical > 0)}${tile("High", "high", m.high ?? 0)}${tile("Overdue", "overdue", overdue, "down", overdue > 0)}${tile("Resolved 7d", "resolved_7d", m.resolved_7d ?? 0, "up")}${tile("Avg score", "avg_score", m.avg_score ?? "—", "up")}</div>`;
+  if (rv.length || pd.length) {
+    h += `<h2>Waiting on you</h2>`;
+    h += rv.map(f => `<div class="area"><span class="k">${esc(f.repo)}</span><span class="v">${f.pr ? `<a href="${esc(f.pr)}">Review PR #${esc(f.pr.split("/").pop())}</a>` : "Approved, PR not opened yet"} · ${esc(VERB[f.check] || f.title)}</span></div>`).join("");
+    if (pd.length) h += `<div class="area"><span class="k">Awaiting Claude</span><span class="v">${pd.length} decision${pd.length > 1 ? "s" : ""} you made here: Claude applies them next session</span><span class="sub">${pd.slice(0, 6).map(f => `${esc(local(f).action)} ${esc(f.repo)} · ${esc(f.code)}`).join(" · ")}${pd.length > 6 ? " …" : ""}</span></div>`;
+  }
+  h += `<h2>Up next</h2><div class="btns"><button class="btn" data-ask="twenty">What should I do in 20 minutes?</button></div><div class="answer" id="ans-twenty" hidden></div>`;
+  h += gs.slice(0, 5).map(([c, fs]) => groupCard(c, fs)).join("") || `<p class="empty">Queue is clear.</p>`;
+  if (gs.length > 5) h += `<button class="btn" data-goto="queue">All ${q.length} tasks in ${gs.length} groups</button>`;
+  const dist = {}; for (const g of Object.values(D.grades)) dist[g.grade] = (dist[g.grade] || 0) + 1;
+  const snap = D.sprint.filter(s => s.snapshot), passed = snap.filter(s => s.auto_status === "pass" || s.auto_status === "warn").length;
+  h += `<h2>Areas</h2><div class="grid2">
+    <button class="area" data-goto="health"><span class="k">Health</span><span class="v">${["A", "B", "C", "D", "F"].filter(g => dist[g]).map(g => `${g} ${dist[g]}`).join(" · ")}</span></button>
+    <button class="area" data-goto="lost"><span class="k">Lost work</span><span class="v">${lostWork().length} branch${lostWork().length === 1 ? "" : "es"} off main</span></button>
+    <button class="area" data-goto="sprint"><span class="k">Sprint</span><span class="v">${snap.length} day builds · ${passed} pass automated UAT</span></button>
+    <button class="area" data-goto="cleanup"><span class="k">Cleanup</span><span class="v">${cleanup().length} open</span></button></div>`;
+  return h;
+};
+V.queue = () => `<div class="controls">
+    <input id="q" type="search" placeholder="Search repo, finding, code" value="${esc(state.q)}" aria-label="Search findings">
+    <select id="scope" aria-label="Scope"><option value="queue">Active queue</option><option value="open">All open</option><option value="all">Everything</option></select>
+    <select id="sort" aria-label="Sort"><option value="rank">Priority</option><option value="age">Oldest first</option><option value="repo">Repo A–Z</option><option value="count">Most repos</option></select>
+    <select id="cat" aria-label="Category"><option value="all">All categories</option>${Object.entries(CAT).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+    <select id="sev" aria-label="Severity"><option value="all">All severities</option>${Object.keys(SEV).map(k => `<option value="${k}">${k}</option>`).join("")}</select>
+  </div><div id="qlist"></div>`;
+function queueList() {
+  let fs = state.scope === "queue" ? queue() : state.scope === "open" ? D.findings.filter(isOpen) : D.findings.slice();
+  if (state.cat !== "all") fs = fs.filter(f => f.category === state.cat);
+  if (state.sev !== "all") fs = fs.filter(f => f.severity === state.sev);
+  const q = state.q.trim().toLowerCase();
+  if (q) fs = fs.filter(f => [f.repo, f.title, f.detail, f.code, f.check, f.category].join(" ").toLowerCase().includes(q));
+  let gs = groups(fs);
+  if (state.sort === "age") gs.sort((a, b) => Math.max(...b[1].map(f => f.age || 0)) - Math.max(...a[1].map(f => f.age || 0)));
+  if (state.sort === "repo") gs.sort((a, b) => a[1][0].repo.localeCompare(b[1][0].repo));
+  if (state.sort === "count") gs.sort((a, b) => b[1].length - a[1].length);
+  $("#qlist").innerHTML = `<p class="count">${fs.length} findings in ${gs.length} groups</p>` + (gs.map(([c, g]) => groupCard(c, g)).join("") || `<p class="empty">Nothing matches.</p>`);
+}
+V.lost = () => {
+  const fs = lostWork();
+  return `<p class="sub">Work that isn't on the default branch. Merge it, cherry-pick it, or delete it.</p>` + (fs.map(f => `<article class="card"><div class="top"><div class="stripe ${f.severity}"></div><div class="body">
+    <div class="row"><span class="title">${esc(f.repo)}</span><code>${esc((f.evidence || [""])[0])}</code>${f.status === "approved" ? '<span class="pill">approved</span>' : ""}</div>
+    <div class="sub">${esc(f.detail)}</div>
+    ${f.pr ? `<a class="btn" href="${esc(f.pr)}">Review the PR</a>` : decisionButtons([f], "f:" + f.code)}</div></div></article>`).join("") || `<p class="empty">Nothing stranded.</p>`);
+};
+V.health = () => {
+  const order = ["A", "B", "C", "D", "F"], colors = {A: "var(--good)", B: "var(--accent)", C: "var(--med)", D: "var(--high)", F: "var(--crit)"};
+  const dist = {}; let total = 0;
+  for (const g of Object.values(D.grades)) if (order.includes(g.grade)) { dist[g.grade] = (dist[g.grade] || 0) + 1; total++; }
+  const w = D.settings.severity_weight || {};
+  return `<div class="dist" role="img" aria-label="Grade distribution">${order.filter(g => dist[g]).map(g => `<span style="flex:${dist[g]};background:${colors[g]}">${g} ${dist[g]}</span>`).join("")}</div>
+    <p class="sub">Score = 100 minus open finding weights (${Object.entries(w).map(([k, v]) => `${k} ${v}`).join(", ")}). ${total} graded repos. ● active.</p>
+    <div class="controls"><input id="hq" type="search" placeholder="Search repos" value="${esc(state.hq)}" aria-label="Search repos"><select id="hsort" aria-label="Sort repos"><option value="score">Lowest score first</option><option value="name">Name A–Z</option><option value="active">Active first</option></select></div><div id="hlist"></div>`;
+};
+function healthList() {
+  let names = Object.keys(D.repos).filter(n => !state.hq || n.toLowerCase().includes(state.hq.toLowerCase()));
+  const sc = n => D.grades[n] ? D.grades[n].score : 0;
+  names.sort(state.hsort === "name" ? (a, b) => a.localeCompare(b) : state.hsort === "active" ? (a, b) => (D.repos[b].active - D.repos[a].active) || sc(a) - sc(b) : (a, b) => sc(a) - sc(b));
+  $("#hlist").innerHTML = names.map(n => {
+    const g = D.grades[n] || {grade: "—", score: 0}, fs = D.findings.filter(f => f.repo === n && isOpen(f));
+    const mix = Object.keys(CAT_SHORT).map(c => [c, fs.filter(f => f.category === c).length]).filter(x => x[1]).map(([c, k]) => `${CAT_SHORT[c]} ${k}`).join(" · ");
+    return `<button class="repo" data-report="${esc(n)}"><span class="grade ${esc(g.grade)}">${esc(g.grade)}</span><span><span class="title">${D.repos[n].active ? "● " : ""}${esc(n)}</span>${D.repos[n].fork ? ' <span class="pill">fork</span>' : ""}<br><span class="sub">${esc(mix || "clean")}</span></span><span class="mono">${g.score}</span></button>`;
+  }).join("");
+}
+V.sprint = () => {
+  const sp = D.settings.sprint || {}, start = new Date(sp.start + "T12:00"), end = new Date(sp.end + "T12:00");
+  const byDay = {}; for (const s of D.sprint) (byDay[s.date] = byDay[s.date] || []).push(s);
+  const startedDays = new Set(D.started.map(s => s.date));
+  const status = list => {
+    const mine = list.map(s => state.uat[s.name.replace(/[^A-Za-z0-9_\-.]+/g, "_")]);
+    if (mine.some(u => u && u.verdict === "fail") || list.some(s => s.auto_status === "fail")) return "fail";
+    if (list.some(s => s.auto_status === "warn")) return "warn";
+    return "pass";
+  };
+  let cells = "";
+  for (let i = 0; i < start.getDay(); i++) cells += "<span></span>";
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().slice(0, 10), list = byDay[iso];
+    const cls = list ? "has " + status(list) : startedDays.has(iso) ? "built" : "";
+    cells += `<button class="${cls}${iso === TODAY ? " today" : ""}" ${list ? `data-day="${iso}"` : "tabindex=\"-1\""} aria-label="${iso}${list ? ": " + list.length + " builds" : ""}">${d.getDate()}</button>`;
+  }
+  const entries = Object.keys(byDay).sort().reverse().map(day => `<h2 id="day-${day}">${new Date(day + "T12:00").toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"})}</h2>` + byDay[day].map(s => {
+    const id = s.name.replace(/[^A-Za-z0-9_\-.]+/g, "_"), mine = state.uat[id];
+    const verdict = mine ? mine.verdict : s.manual;
+    const missed = (verdict === "passed" || verdict === "pass") && s.auto_issues.some(i => SEV[i.severity] >= 2);
+    const issues = s.auto_issues.map(i => `<div class="row"><span class="dot ${i.severity}"></span><span>${esc(i.title)}</span><span class="sub">${esc(i.detail)} · ${esc(i.viewport)}</span></div>`).join("");
+    const dis = D.demo || (state.db && state.canWrite) ? "" : " disabled";
+    return `<article class="card"><div class="top"><div class="stripe ${s.auto_status === "fail" ? "critical" : s.auto_status === "warn" ? "medium" : "low"}"></div><div class="body">
+      <div class="row"><a class="title" href="${esc(s.snapshot || (s.build_path ? `${ghRepo(s.repo)}/tree/main/${s.build_path}` : ghRepo(s.repo)))}">${esc(s.name)}</a>${s.snapshot ? "" : '<span class="pill">no snapshot</span>'}</div>
+      <div class="row"><a class="pill" href="${esc(ghRepo(s.repo))}">repo</a>${s.live ? `<a class="pill" href="${esc(s.live)}">live build</a>` : ""}<span class="pill ${s.auto_status === "pass" ? "pass" : s.auto_status === "fail" ? "fail" : "warn"}">automated: ${esc(s.auto_status)}</span><span class="pill">you: ${esc(verdict || "not yet")}</span></div>
+      ${s.auto_note ? `<div class="sub">${esc(s.auto_note)}</div>` : ""}
+      ${missed ? `<div class="miss"><b>Automated UAT caught what the playtest passed:</b></div>` : ""}
+      ${issues || (s.auto_status === "pass" ? '<div class="sub">No issues found.</div>' : "")}
+      <details><summary>Record your UAT</summary>
+        <textarea data-note="${esc(id)}" aria-label="What you missed for ${esc(s.name)}" placeholder="What I missed or noticed">${esc(mine ? mine.note : "")}</textarea>
+        <div class="btns"><button class="btn primary" data-uat="pass" data-name="${esc(s.name)}"${dis}>Pass</button><button class="btn" data-uat="fail" data-name="${esc(s.name)}"${dis}>Fail</button></div>
+      </details></div></div></article>`;
+  }).join("")).join("");
+  return `<div class="cal">${["S", "M", "T", "W", "T", "F", "S"].map(x => `<span class="h">${x}</span>`).join("")}${cells}</div>
+    <div class="legend"><span><i style="background:var(--good)"></i>pass</span><span><i style="background:var(--med)"></i>issues</span><span><i style="background:var(--crit)"></i>fail</span><span><i style="background:var(--chip)"></i>repo started, no snapshot</span></div>
+    <p class="sub">Automated UAT opens each day snapshot as the Claude app shows it, at phone and desktop size. Last run ${esc(D.uat_run || "never")}.</p>${entries}`;
+};
+V.toolbox = () => {
+  const by = {}; for (const t of D.toolbox) (by[t.kind] = by[t.kind] || []).push(t);
+  const plat = Object.entries(D.repos).filter(([n, r]) => (r.tags || []).some(t => ["pipeline", "skill", "library", "platform"].includes(t)));
+  const tags = {}; for (const [n, r] of Object.entries(D.repos)) for (const t of r.tags || []) (tags[t] = tags[t] || []).push(n);
+  return `<h2>Skills</h2>${(by.skill || []).map(t => `<div class="area"><span class="v">${esc(t.name)}</span><a href="${esc(t.url)}">${esc(t.repo)}</a></div>`).join("") || '<p class="empty">None.</p>'}
+    <h2>Workflows</h2>${(by.workflow || []).map(t => `<div class="area"><span class="v">${esc(t.name)}</span><a href="${esc(t.url)}">${esc(t.repo)}</a></div>`).join("") || '<p class="empty">None.</p>'}
+    <h2>Platforms & pipelines</h2>${plat.map(([n, r]) => `<button class="area" data-report="${esc(n)}"><span class="v">${esc(n)}</span><span class="sub">${esc(r.what || "")}</span></button>`).join("")}
+    <h2>By tag</h2><div class="row">${Object.entries(tags).sort().map(([t, ns]) => `<button class="pill" data-tag="${esc(t)}" title="${esc(ns.join(", "))}">${esc(t)} · ${ns.length}</button>`).join("")}</div>`;
+};
+V.cleanup = () => `<p class="sub">Duplicates, empties and copies. Most are one decision, not a session.</p>` + (groups(cleanup()).map(([c, fs]) => groupCard(c, fs)).join("") || `<p class="empty">Nothing to clean up.</p>`);
+V.portfolio = () => {
+  const ns = Object.entries(D.repos).filter(([n, r]) => !r.fork && !r.empty).map(([n]) => n)
+    .sort((a, b) => (D.repos[b].portfolio - D.repos[a].portfolio) || (D.grades[b].score - D.grades[a].score)).slice(0, 10);
+  return `<p class="sub">Strongest first. Ready means no critical or high findings, tests and CI, run docs, and a live link. Pin one with <code>portfolio: true</code> in index.yml.</p>` + ns.map(n => {
+    const fs = D.findings.filter(f => f.repo === n && isOpen(f)), checks = new Set(fs.map(f => f.check));
+    const gaps = [["no-tests", "tests"], ["no-ci", "CI"], ["no-readme-run", "run docs"]].filter(([c]) => checks.has(c)).map(([, l]) => l);
+    const blockers = fs.filter(f => SEV[f.severity] >= 3).length, g = D.grades[n];
+    return `<button class="repo" data-report="${esc(n)}"><span class="grade ${esc(g.grade)}">${esc(g.grade)}</span><span><span class="title">${esc(n)}</span><br><span class="sub">${gaps.length ? "needs " + esc(gaps.join(", ")) : "ready"}${blockers ? ` · ${blockers} blocker${blockers > 1 ? "s" : ""}` : ""}</span></span><span class="mono">${g.score}</span></button>`;
+  }).join("");
+};
+V.reports = () => {
+  if (!state.report) return `<div class="controls"><input id="hq" type="search" placeholder="Search repos" value="${esc(state.hq)}" aria-label="Search repos"><select id="hsort" aria-label="Sort repos"><option value="name">Name A–Z</option><option value="score">Lowest score first</option><option value="active">Active first</option></select></div><div id="hlist"></div>`;
+  const n = state.report, r = D.repos[n] || {}, g = D.grades[n] || {grade: "—", score: 0};
+  const fs = D.findings.filter(f => f.repo === n && f.status !== "resolved").sort(cmp);
+  return `<button class="btn ghost" data-back="1">← All repos</button>
+    <div class="row" style="margin-top:8px"><span class="grade ${esc(g.grade)}">${esc(g.grade)}</span><div><h1>${esc(n)}</h1><span class="sub">${g.score} · ${r.active ? "active" : "inactive"} · ${esc(r.visibility || "")}${r.fork ? " · fork" : ""}</span></div></div>
+    ${r.what ? `<p>${esc(r.what)}</p>` : ""}
+    <dl class="kv"><dt>Default branch</dt><dd><code>${esc(r.default)}</code> · ${r.default_commits} commits</dd><dt>Checked</dt><dd><code>${esc(r.work_branch)}</code> · ${r.branches} branches · ${r.files} files</dd><dt>Links</dt><dd><a href="${esc(ghRepo(n))}">GitHub</a></dd></dl>
+    ${Object.keys(CAT).map(c => { const list = fs.filter(f => f.category === c); return list.length ? `<h2>${CAT[c]} · ${list.length}</h2>` + groups(list).map(([ch, gfs]) => groupCard(ch, gfs)).join("") : ""; }).join("") || '<p class="empty">Meets the bar. Nothing to fix.</p>'}`;
+};
+V.guide = () => {
+  const sla = S.sla_days || {}, w = S.severity_weight || {};
+  return `<h2>The loop</h2><ol>
+    <li>Nightly, every repo is cloned read-only and graded against <code>rubric.yml</code>.</li>
+    <li>Projects are inactive by default; <code>active: true</code> in <code>index.yml</code> pulls their tasks into the queue.</li>
+    <li>Decide here: Approve, Snooze or Dismiss. Decisions save with this page and show as "awaiting Claude".</li>
+    <li>Next session, Claude reads them, updates <code>tasks.yml</code> and opens the fix PRs with the prompt inside. You review and merge.</li>
+    <li>When a check stops firing it resolves; if it fires again it reopens with its history.</li></ol>
+    <h2>Service levels</h2><div class="wrapx"><table class="plain"><tr><th>Severity</th><th>Fix within</th><th>Weight</th></tr>${Object.keys(SEV).map(k => `<tr><td><span class="row"><span class="dot ${k}"></span>${k}</span></td><td>${sla[k] ?? "—"} days</td><td>${w[k] ?? "—"}</td></tr>`).join("")}</table></div>
+    <h2>Freshness</h2><p>This page carries the data from its last build (${esc(D.generated)}). It is rebuilt and republished daily from the <code>index</code> repo. The markdown pages in the repo update nightly on their own.</p>
+    <h2>Automated UAT</h2><p>Every dated snapshot is opened in a real browser as the Claude app shows it, at phone and desktop size, and checked for: ${Object.values(D.uat_checks || {}).map(c => esc(c.title.toLowerCase())).join(", ")}.</p>`;
+};
+
+/* ---------- shell ---------- */
+function counts() { return {queue: queue().length, lost: lostWork().length, cleanup: cleanup().length}; }
+function paintTabs() {
+  const c = counts();
+  $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" aria-selected="${state.tab === k}" data-tab="${k}">${l}${c[k] ? `<span class="n">${c[k]}</span>` : ""}</button>`).join("");
+}
+function render() {
+  paintTabs();
+  const v = $("#view"); v.innerHTML = V[state.tab]();
+  if (state.tab === "queue") { $("#scope").value = state.scope; $("#sort").value = state.sort; $("#cat").value = state.cat; $("#sev").value = state.sev; queueList(); }
+  if ((state.tab === "health" || (state.tab === "reports" && !state.report))) { const hs = $("#hsort"); if (hs) { if (state.tab === "reports" && state.hsort === "score" && !render.touched) hs.value = "name"; else hs.value = state.hsort; state.hsort = hs.value; } healthList(); }
+  for (const k in state.answers) paintAnswer(k);
+}
+function go(tab, opts = {}) { state.tab = tab; if ("report" in opts) state.report = opts.report; render(); window.scrollTo(0, 0); try { history.replaceState(null, "", "#" + tab + (state.report && tab === "reports" ? "-" + state.report : "")); } catch (_) {} }
+function setMode() {
+  const m = $("#mode");
+  if (D.demo) { m.textContent = "demo · sample data"; return; }
+  m.textContent = state.db && state.canWrite ? "decisions on" : state.db ? "view only" : "read-only";
+  m.classList.toggle("live", !!(state.db && state.canWrite));
+}
+function findGroup(scope) {
+  const [kind, ...rest] = scope.split(":");
+  if (kind === "f") return D.findings.filter(f => f.code === rest[0]);
+  const codes = new Set(rest.slice(1).join(":").split(","));
+  return D.findings.filter(f => codes.has(f.code));
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-tab],[data-goto],[data-report],[data-back],[data-act],[data-copy],[data-ask],[data-uat],[data-day],[data-tag],[data-undo]");
+  if (!t) return;
+  if (t.dataset.tab) return go(t.dataset.tab, {report: null});
+  if (t.dataset.goto) return go(t.dataset.goto, {report: null});
+  if (t.dataset.report) return go("reports", {report: t.dataset.report});
+  if (t.dataset.back) return go("reports", {report: null});
+  if (t.dataset.tag) { state.q = t.dataset.tag; state.scope = "all"; return go("queue"); }
+  if (t.dataset.day) { const el = document.getElementById("day-" + t.dataset.day); if (el) el.scrollIntoView({block: "start"}); return; }
+  if (t.dataset.act) return decide(findGroup(t.dataset.scope), t.dataset.act);
+  if (t.dataset.undo) return undo(t.dataset.undo);
+  if (t.dataset.uat) return saveUat(t.dataset.name, t.dataset.uat);
+  if (t.dataset.copy) { const f = D.findings.find(x => x.code === t.dataset.copy); try { navigator.clipboard.writeText(f.prompt).then(() => toast("Prompt copied"), () => toast("Copy isn't allowed here")); } catch (_) { toast("Copy isn't allowed here"); } return; }
+  if (t.dataset.ask) {
+    if (t.dataset.ask === "twenty") return ask("twenty", twentyPrompt());
+    const fs = groups(D.findings.filter(f => f.check === t.dataset.check && (f.in_queue || state.scope !== "queue") && isOpen(f)));
+    const g = fs.length ? fs[0][1] : D.findings.filter(f => f.check === t.dataset.check);
+    return ask("g-" + t.dataset.check + "-" + t.dataset.ask, groupPrompt(t.dataset.ask, t.dataset.check, g));
+  }
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "q") { state.q = e.target.value; queueList(); }
+  if (e.target.id === "hq") { state.hq = e.target.value; healthList(); }
+});
+document.addEventListener("change", e => {
+  const id = e.target.id;
+  if (["scope", "sort", "cat", "sev"].includes(id)) { state[id] = e.target.value; queueList(); }
+  if (id === "hsort") { state.hsort = e.target.value; render.touched = true; healthList(); }
+});
+
+/* ---------- boot ---------- */
+$("#asof").textContent = "data as of " + (D.generated || D.graded);
+if (D.demo) {
+  $("#mode").textContent = "demo · sample data";
+  document.addEventListener("click", e => { const a = e.target.closest && e.target.closest('a[href="#demo"]'); if (a) { e.preventDefault(); toast("Demo: sample data, no real repo behind this link"); } }, true);
+}
+const h0 = (location.hash || "").slice(1);
+if (h0) { const [tab, ...rep] = h0.split("-"); const known = TABS.some(([k]) => k === tab); if (known) { state.tab = tab; if (tab === "reports" && rep.length) state.report = rep.join("-"); } }
+render();
+
+(async () => {
+  if (D.demo || !window.claude || typeof window.claude.use !== "function") return;   // the demo never touches a host
+  const [db, user, sample] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("sample")]);
+  state.sample = sample;
+  if (db) {
+    state.db = db;
+    let can = null;
+    try { can = user && user.can ? await user.can("data.write") : null; } catch (_) {}
+    state.canWrite = can !== false;
+    const timer = setTimeout(() => toast("Saved decisions can't be reached yet."), 10000);
+    db.collection("decisions").onSnapshot(s => {
+      clearTimeout(timer);
+      const m = {}; for (const d of s.docs) m[d.id] = d.data(); state.dec = m;
+      if (!document.activeElement || !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) render(); else paintTabs();
+    }, () => clearTimeout(timer));
+    db.collection("uat").onSnapshot(s => {
+      const m = {}; for (const d of s.docs) m[d.id] = d.data(); state.uat = m;
+      if (state.tab === "sprint" && !(document.activeElement && document.activeElement.tagName === "TEXTAREA")) render();
+    }, () => {});
+  }
+  setMode(); render();
+})();
+</script>
+</body>
+</html>
