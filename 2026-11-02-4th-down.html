@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>11/02/2026</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root {
+  --bg: #f6f6f4;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #6b6a65;
+  --line: #e4e3df;
+  --accent: #2a78d6;
+  --accent-ink: #ffffff;
+  --track: #ecebe7;
+  --best: #2a78d6;
+  --other: #a9a8a2;
+  --warn-bg: #fff6e0;
+  --warn-ink: #6b4b00;
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121211;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --ink-3: #9a998f;
+    --line: #2e2e2c;
+    --accent: #3987e5;
+    --accent-ink: #ffffff;
+    --track: #2a2a28;
+    --best: #3987e5;
+    --other: #6b6a65;
+    --warn-bg: #2d2615;
+    --warn-ink: #f2d38a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121211; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --ink-3: #9a998f;
+  --line: #2e2e2c; --accent: #3987e5; --accent-ink: #ffffff; --track: #2a2a28;
+  --best: #3987e5; --other: #6b6a65; --warn-bg: #2d2615; --warn-ink: #f2d38a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding-block: 16px 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 560px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: -0.01em; }
+.sub { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.full { grid-column: 1 / -1; }
+label, .lbl { display: block; font-size: 12px; font-weight: 600; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+input, select {
+  width: 100%;
+  font-size: 16px; /* >=16px stops iOS zoom-on-focus */
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-appearance: none; appearance: none;
+  min-height: 44px;
+}
+.row2 { display: flex; gap: 6px; align-items: center; }
+.row2 span { color: var(--ink-2); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-height: 44px; }
+.seg button {
+  flex: 1; border: 0; background: var(--bg); color: var(--ink); font-size: 15px;
+  padding: 0 10px; min-height: 44px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.yardrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.verdict { font-size: 24px; font-weight: 700; margin: 0; }
+.verdict-sub { color: var(--ink-2); font-size: 14px; margin: 4px 0 0; }
+.opt { padding: 12px 0; border-top: 1px solid var(--line); }
+.opt:first-child { border-top: 0; padding-top: 0; }
+.opt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.opt-name { font-weight: 600; }
+.opt-wp { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bar { height: 8px; background: var(--track); border-radius: 4px; margin: 6px 0; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--other); border-radius: 4px; }
+.opt.best .bar > i { background: var(--best); }
+.opt-detail { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.opt.na { color: var(--ink-3); }
+.opt.na .opt-wp { font-size: 15px; font-weight: 500; }
+.tag {
+  display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.04em; padding: 1px 6px; border-radius: 4px;
+  background: var(--warn-bg); color: var(--warn-ink); vertical-align: 1px;
+}
+.note { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 10px; font-size: 13px; margin-top: 10px; }
+details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+details ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); }
+details li { margin-bottom: 6px; }
+@media (max-width: 360px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>4th Down Calculator</h1>
+  <p class="sub" id="sub"></p>
+
+  <section class="card" aria-label="Game state">
+    <div class="grid">
+      <div><label for="own">Your score</label><input id="own" type="number" inputmode="numeric"></div>
+      <div><label for="opp">Opponent</label><input id="opp" type="number" inputmode="numeric"></div>
+      <div><label for="qtr">Quarter</label><select id="qtr"></select></div>
+      <div>
+        <span class="lbl">Clock</span>
+        <div class="row2">
+          <input id="min" type="number" inputmode="numeric" aria-label="Minutes"><span>:</span>
+          <input id="sec" type="number" inputmode="numeric" aria-label="Seconds">
+        </div>
+      </div>
+      <div class="full">
+        <span class="lbl">Ball on</span>
+        <div class="yardrow">
+          <div class="seg" role="group" aria-label="Side of field">
+            <button type="button" id="side-own" data-side="own">Own</button>
+            <button type="button" id="side-opp" data-side="opp">Opp</button>
+          </div>
+          <input id="yard" type="number" inputmode="numeric" aria-label="Yard line">
+        </div>
+      </div>
+      <div><label for="togo">Yards to go</label><input id="togo" type="number" inputmode="numeric"></div>
+      <div><label for="spread">Spread (+ = you favored)</label><input id="spread" type="number" inputmode="decimal"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-live="polite">
+    <p class="verdict" id="verdict"></p>
+    <p class="verdict-sub" id="verdict-sub"></p>
+  </section>
+
+  <section class="card" id="options" aria-label="Options"></section>
+
+  <section class="card">
+    <details>
+      <summary>Assumptions &amp; sources</summary>
+      <ul id="assumptions"></ul>
+    </details>
+  </section>
+</main>
+<script>
+"use strict";
+const CONFIG = {"tables":{"meta":{"seasons":[2018,2025],"build_date":"2026-11-03","source":"nflverse play-by-play (REG+POST per data.season_types)","row_counts":{"plays_in_seasons":389358,"ep_table":126271,"conv_table_4th":6045,"conv_table_3rd_merged":21399,"fg":8616,"punt_table":17439},"definitions":{"ep_table":"mean nflverse ep on 1st & 10 (1st & goal inside the 10), centred rolling mean of 5","conv_table":"4th-down run/pass attempts resolved as converted or failed; last bucket is 20+; buckets with n_4th < 200 include 3rd downs (merged_3rd)","fg":"logistic regression of make on kick_distance; blocked = miss","punt_table":"unblocked punts; net = kick_distance - return_yards (touchback: yardline_100 - (field - touchback spot)); penalties and muffs ignored"}},"ep_table":[{"yardline_100":1,"ep":6.1775,"ep_raw":6.3198,"n":1349},{"yardline_100":2,"ep":6.0931,"ep_raw":6.1888,"n":710},{"yardline_100":3,"ep":6.0121,"ep_raw":6.0238,"n":739},{"yardline_100":4,"ep":5.8544,"ep_raw":5.8399,"n":833},{"yardline_100":5,"ep":5.699,"ep_raw":5.688,"n":783},{"yardline_100":6,"ep":5.558,"ep_raw":5.5313,"n":740},{"yardline_100":7,"ep":5.4061,"ep_raw":5.4121,"n":805},{"yardline_100":8,"ep":5.2607,"ep_raw":5.3186,"n":793},{"yardline_100":9,"ep":5.1402,"ep_raw":5.0806,"n":875},{"yardline_100":10,"ep":5.048,"ep_raw":4.961,"n":726},{"yardline_100":11,"ep":4.9717,"ep_raw":4.9288,"n":948},{"yardline_100":12,"ep":4.9344,"ep_raw":4.9512,"n":867},{"yardline_100":13,"ep":4.9116,"ep_raw":4.937,"n":883},{"yardline_100":14,"ep":4.8754,"ep_raw":4.8942,"n":945},{"yardline_100":15,"ep":4.8306,"ep_raw":4.8468,"n":927},{"yardline_100":16,"ep":4.7789,"ep_raw":4.7478,"n":856},{"yardline_100":17,"ep":4.7063,"ep_raw":4.7271,"n":867},{"yardline_100":18,"ep":4.6356,"ep_raw":4.6786,"n":945},{"yardline_100":19,"ep":4.5742,"ep_raw":4.531,"n":964},{"yardline_100":20,"ep":4.5157,"ep_raw":4.4932,"n":1080},{"yardline_100":21,"ep":4.4487,"ep_raw":4.4412,"n":888},{"yardline_100":22,"ep":4.39,"ep_raw":4.4345,"n":961},{"yardline_100":23,"ep":4.3184,"ep_raw":4.3434,"n":1067},{"yardline_100":24,"ep":4.2494,"ep_raw":4.2378,"n":1161},{"yardline_100":25,"ep":4.1633,"ep_raw":4.1349,"n":1154},{"yardline_100":26,"ep":4.0892,"ep_raw":4.0963,"n":1008},{"yardline_100":27,"ep":4.016,"ep_raw":4.004,"n":953},{"yardline_100":28,"ep":3.9434,"ep_raw":3.9731,"n":1082},{"yardline_100":29,"ep":3.8721,"ep_raw":3.8715,"n":1117},{"yardline_100":30,"ep":3.8075,"ep_raw":3.7724,"n":1217},{"yardline_100":31,"ep":3.7345,"ep_raw":3.7398,"n":1009},{"yardline_100":32,"ep":3.6568,"ep_raw":3.6805,"n":1119},{"yardline_100":33,"ep":3.5921,"ep_raw":3.6083,"n":1219},{"yardline_100":34,"ep":3.5282,"ep_raw":3.4829,"n":1305},{"yardline_100":35,"ep":3.4623,"ep_raw":3.4488,"n":1315},{"yardline_100":36,"ep":3.4063,"ep_raw":3.4204,"n":1139},{"yardline_100":37,"ep":3.3567,"ep_raw":3.3512,"n":1217},{"yardline_100":38,"ep":3.3002,"ep_raw":3.328,"n":1316},{"yardline_100":39,"ep":3.244,"ep_raw":3.235,"n":1346},{"yardline_100":40,"ep":3.1766,"ep_raw":3.1665,"n":1391},{"yardline_100":41,"ep":3.0853,"ep_raw":3.1394,"n":1277},{"yardline_100":42,"ep":3.0132,"ep_raw":3.014,"n":1259},{"yardline_100":43,"ep":2.9506,"ep_raw":2.8716,"n":1404},{"yardline_100":44,"ep":2.8819,"ep_raw":2.8747,"n":1467},{"yardline_100":45,"ep":2.8291,"ep_raw":2.8531,"n":1553},{"yardline_100":46,"ep":2.7844,"ep_raw":2.7959,"n":1335},{"yardline_100":47,"ep":2.7276,"ep_raw":2.75,"n":1302},{"yardline_100":48,"ep":2.668,"ep_raw":2.6482,"n":1506},{"yardline_100":49,"ep":2.6003,"ep_raw":2.5906,"n":1658},{"yardline_100":50,"ep":2.5418,"ep_raw":2.5554,"n":1630},{"yardline_100":51,"ep":2.4949,"ep_raw":2.4574,"n":1482},{"yardline_100":52,"ep":2.4534,"ep_raw":2.4571,"n":1497},{"yardline_100":53,"ep":2.3845,"ep_raw":2.4139,"n":1634},{"yardline_100":54,"ep":2.3274,"ep_raw":2.383,"n":1675},{"yardline_100":55,"ep":2.2648,"ep_raw":2.2108,"n":1687},{"yardline_100":56,"ep":2.1893,"ep_raw":2.1721,"n":1464},{"yardline_100":57,"ep":2.1133,"ep_raw":2.1444,"n":1497},{"yardline_100":58,"ep":2.0576,"ep_raw":2.036,"n":1634},{"yardline_100":59,"ep":2.0011,"ep_raw":2.0029,"n":1853},{"yardline_100":60,"ep":1.9334,"ep_raw":1.9325,"n":2139},{"yardline_100":61,"ep":1.8867,"ep_raw":1.8895,"n":1625},{"yardline_100":62,"ep":1.8426,"ep_raw":1.8059,"n":1796},{"yardline_100":63,"ep":1.7692,"ep_raw":1.8026,"n":2065},{"yardline_100":64,"ep":1.7041,"ep_raw":1.7823,"n":2373},{"yardline_100":65,"ep":1.6507,"ep_raw":1.5654,"n":2613},{"yardline_100":66,"ep":1.5989,"ep_raw":1.5641,"n":1302},{"yardline_100":67,"ep":1.5245,"ep_raw":1.5391,"n":1310},{"yardline_100":68,"ep":1.4857,"ep_raw":1.5435,"n":1465},{"yardline_100":69,"ep":1.4404,"ep_raw":1.4102,"n":1532},{"yardline_100":70,"ep":1.373,"ep_raw":1.3718,"n":3435},{"yardline_100":71,"ep":1.3018,"ep_raw":1.3375,"n":1218},{"yardline_100":72,"ep":1.2421,"ep_raw":1.2019,"n":1262},{"yardline_100":73,"ep":1.1861,"ep_raw":1.1877,"n":1269},{"yardline_100":74,"ep":1.0945,"ep_raw":1.1118,"n":1368},{"yardline_100":75,"ep":1.0249,"ep_raw":1.0915,"n":12035},{"yardline_100":76,"ep":0.9417,"ep_raw":0.8795,"n":1192},{"yardline_100":77,"ep":0.8684,"ep_raw":0.8541,"n":1208},{"yardline_100":78,"ep":0.7931,"ep_raw":0.7718,"n":1098},{"yardline_100":79,"ep":0.7471,"ep_raw":0.7451,"n":1114},{"yardline_100":80,"ep":0.6952,"ep_raw":0.7151,"n":2778},{"yardline_100":81,"ep":0.6544,"ep_raw":0.6492,"n":882},{"yardline_100":82,"ep":0.6048,"ep_raw":0.5947,"n":819},{"yardline_100":83,"ep":0.5482,"ep_raw":0.5678,"n":785},{"yardline_100":84,"ep":0.4864,"ep_raw":0.4974,"n":784},{"yardline_100":85,"ep":0.4322,"ep_raw":0.4319,"n":827},{"yardline_100":86,"ep":0.381,"ep_raw":0.3405,"n":710},{"yardline_100":87,"ep":0.3232,"ep_raw":0.3237,"n":645},{"yardline_100":88,"ep":0.267,"ep_raw":0.3114,"n":600},{"yardline_100":89,"ep":0.2276,"ep_raw":0.2086,"n":548},{"yardline_100":90,"ep":0.1674,"ep_raw":0.151,"n":799},{"yardline_100":91,"ep":0.1038,"ep_raw":0.1433,"n":625},{"yardline_100":92,"ep":0.0679,"ep_raw":0.0228,"n":523},{"yardline_100":93,"ep":0.0305,"ep_raw":-0.0069,"n":362},{"yardline_100":94,"ep":-0.012,"ep_raw":0.0293,"n":321},{"yardline_100":95,"ep":-0.0426,"ep_raw":-0.036,"n":308},{"yardline_100":96,"ep":-0.0914,"ep_raw":-0.0691,"n":285},{"yardline_100":97,"ep":-0.1971,"ep_raw":-0.1303,"n":232},{"yardline_100":98,"ep":-0.2374,"ep_raw":-0.2507,"n":291},{"yardline_100":99,"ep":-0.2934,"ep_raw":-0.4993,"n":295}],"conv_table":[{"ydstogo":1,"label":"1","rate":0.6762,"n_4th":2406,"n_3rd":0,"merged_3rd":false},{"ydstogo":2,"label":"2","rate":0.5865,"n_4th":873,"n_3rd":0,"merged_3rd":false},{"ydstogo":3,"label":"3","rate":0.5135,"n_4th":557,"n_3rd":0,"merged_3rd":false},{"ydstogo":4,"label":"4","rate":0.4989,"n_4th":467,"n_3rd":0,"merged_3rd":false},{"ydstogo":5,"label":"5","rate":0.4723,"n_4th":343,"n_3rd":0,"merged_3rd":false},{"ydstogo":6,"label":"6","rate":0.4132,"n_4th":242,"n_3rd":0,"merged_3rd":false},{"ydstogo":7,"label":"7","rate":0.3676,"n_4th":177,"n_3rd":4181,"merged_3rd":true},{"ydstogo":8,"label":"8","rate":0.335,"n_4th":150,"n_3rd":3710,"merged_3rd":true},{"ydstogo":9,"label":"9","rate":0.3008,"n_4th":92,"n_3rd":3199,"merged_3rd":true},{"ydstogo":10,"label":"10","rate":0.2992,"n_4th":264,"n_3rd":0,"merged_3rd":false},{"ydstogo":11,"label":"11","rate":0.2508,"n_4th":76,"n_3rd":1810,"merged_3rd":true},{"ydstogo":12,"label":"12","rate":0.2035,"n_4th":52,"n_3rd":1432,"merged_3rd":true},{"ydstogo":13,"label":"13","rate":0.2101,"n_4th":52,"n_3rd":1176,"merged_3rd":true},{"ydstogo":14,"label":"14","rate":0.1678,"n_4th":43,"n_3rd":1006,"merged_3rd":true},{"ydstogo":15,"label":"15","rate":0.1402,"n_4th":63,"n_3rd":1114,"merged_3rd":true},{"ydstogo":16,"label":"16","rate":0.1162,"n_4th":31,"n_3rd":718,"merged_3rd":true},{"ydstogo":17,"label":"17","rate":0.1193,"n_4th":27,"n_3rd":585,"merged_3rd":true},{"ydstogo":18,"label":"18","rate":0.092,"n_4th":32,"n_3rd":544,"merged_3rd":true},{"ydstogo":19,"label":"19","rate":0.0789,"n_4th":16,"n_3rd":402,"merged_3rd":true},{"ydstogo":20,"label":"20+","rate":0.0411,"n_4th":82,"n_3rd":1522,"merged_3rd":true}],"fg":{"a":6.190599,"b":-0.104723,"n":8616,"make_rate":0.8469,"distance_min":19,"distance_max":70},"punt_table":[{"yardline_lo":35,"yardline_hi":39,"n":247,"median_net_yards":28.0,"median_net_yards_non_touchback":30.0,"touchback_rate":0.2146},{"yardline_lo":40,"yardline_hi":44,"n":983,"median_net_yards":32.0,"median_net_yards_non_touchback":33.0,"touchback_rate":0.1943},{"yardline_lo":45,"yardline_hi":49,"n":1247,"median_net_yards":36.0,"median_net_yards_non_touchback":37.0,"touchback_rate":0.1492},{"yardline_lo":50,"yardline_hi":54,"n":1497,"median_net_yards":39.0,"median_net_yards_non_touchback":40.0,"touchback_rate":0.1423},{"yardline_lo":55,"yardline_hi":59,"n":1845,"median_net_yards":41.0,"median_net_yards_non_touchback":42.0,"touchback_rate":0.135},{"yardline_lo":60,"yardline_hi":64,"n":1953,"median_net_yards":43.0,"median_net_yards_non_touchback":44.0,"touchback_rate":0.0881},{"yardline_lo":65,"yardline_hi":69,"n":2419,"median_net_yards":45.0,"median_net_yards_non_touchback":45.0,"touchback_rate":0.0405},{"yardline_lo":70,"yardline_hi":74,"n":2462,"median_net_yards":45.0,"median_net_yards_non_touchback":44.0,"touchback_rate":0.0154},{"yardline_lo":75,"yardline_hi":79,"n":1876,"median_net_yards":44.0,"median_net_yards_non_touchback":44.0,"touchback_rate":0.0053},{"yardline_lo":80,"yardline_hi":84,"n":1305,"median_net_yards":44.0,"median_net_yards_non_touchback":44.0,"touchback_rate":0.0046},{"yardline_lo":85,"yardline_hi":89,"n":886,"median_net_yards":44.0,"median_net_yards_non_touchback":44.0,"touchback_rate":0.0},{"yardline_lo":90,"yardline_hi":94,"n":487,"median_net_yards":44.0,"median_net_yards_non_touchback":44.0,"touchback_rate":0.0},{"yardline_lo":95,"yardline_hi":99,"n":232,"median_net_yards":43.5,"median_net_yards_non_touchback":43.5,"touchback_rate":0.0}]},"heuristic":{"label":"heuristic","wp":{"sigma":13.86,"min_seconds":30.0},"tossup":{"tossup_max_wp_pts":1.0,"lean_max_wp_pts":4.0,"noise_band":[0.4,0.6],"noise_band_tossup_max_wp_pts":1.5},"time_costs_seconds":{"go":6.0,"punt":6.0,"field_goal":6.0}},"rules":{"season":2025,"field_yards":100,"game_seconds":3600,"quarter_seconds":900.0,"td_points":6.95,"fg_points":3.0,"kickoff_start_yardline_100":65,"punt_touchback_yardline_100":80,"fg_los_to_kick_distance":17,"fg_max_attempt_distance":70,"fg_miss_spot_offset":7,"fg_miss_max_yardline_100_for_opp":80},"ui":{"quarters":4,"defaults":{"own_score":17,"opp_score":20,"quarter":4,"clock_minutes":6,"clock_seconds":0,"side":"opp","yard":45,"ydstogo":2,"posteam_spread":0.0,"spread_step":0.5}}};
+const T = CONFIG.tables, H = CONFIG.heuristic, R = CONFIG.rules, U = CONFIG.ui;
+const PCT = 100;        // display only: probability -> percent / WP points
+const SEC_PER_MIN = 60; // clock entry only
+const F = R.field_yards, MID = F / 2;
+const $ = (id) => document.getElementById(id);
+
+const epByYl = new Map(T.ep_table.map((r) => [r.yardline_100, r.ep]));
+const YL_MIN = T.ep_table[0].yardline_100;
+const YL_MAX = T.ep_table[T.ep_table.length - 1].yardline_100;
+const CONV_MAX = T.conv_table[T.conv_table.length - 1].ydstogo;
+
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+const ep = (yl) => epByYl.get(clamp(Math.round(yl), YL_MIN, YL_MAX));
+const convRow = (togo) => T.conv_table.find((r) => r.ydstogo === clamp(togo, T.conv_table[0].ydstogo, CONV_MAX));
+
+// Standard normal CDF, Marsaglia series: 1/2 + phi(x) * (x + x^3/3 + x^5/(3*5) + ...).
+function normCdf(x) {
+  const phi = Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
+  if (phi === 0) return x > 0 ? 1 : 0;
+  let term = x, sum = x;
+  for (let k = 1; Math.abs(term) > Number.EPSILON * Math.abs(sum); k++) {
+    term *= x * x / (2 * k + 1);
+    sum += term;
+  }
+  const p = 1 / 2 + phi * sum;
+  return Number.isFinite(p) ? clamp(p, 0, 1) : (x > 0 ? 1 : 0);
+}
+
+// HEURISTIC WP for the team with the ball (see config heuristic.wp).
+function wp(sd, yl, secs, spread) {
+  const left = Math.max(secs, 0);
+  const frac = left / R.game_seconds;
+  const fracFloor = Math.max(left, H.wp.min_seconds) / R.game_seconds;
+  return normCdf((sd + ep(yl) + spread * frac) / (H.wp.sigma * Math.sqrt(fracFloor)));
+}
+// Our WP when the opponent has the ball at their own yardline_100 `oppYl`.
+const wpOppBall = (sd, oppYl, secs, spread) => 1 - wp(-sd, oppYl, secs, -spread);
+
+const fmtPct = (p) => (p * PCT).toFixed(1) + "%";
+const fmtEp = (x) => (x >= 0 ? "+" : "") + x.toFixed(2);
+// Yard line from the offense's view: "your 30" = own 30, "their 8" = opponent's 8.
+const fmtYl = (yl) => (yl === MID ? "midfield" : yl > MID ? "your " + (F - yl) : "their " + yl);
+
+function evaluate(s) {
+  const tc = H.time_costs_seconds, kick = R.kickoff_start_yardline_100;
+  const opts = [];
+
+  // GO: convert -> 1st down at the line to gain (TD if goal-to-go); fail -> opponent at the spot.
+  {
+    const row = convRow(s.togo), p = row.rate, t = s.secs - tc.go;
+    const td = s.togo >= s.yl;
+    const wS = td ? wpOppBall(s.sd + R.td_points, kick, t, s.spread) : wp(s.sd, s.yl - s.togo, t, s.spread);
+    const eS = td ? R.td_points - ep(kick) : ep(s.yl - s.togo);
+    const wF = wpOppBall(s.sd, F - s.yl, t, s.spread), eF = -ep(F - s.yl);
+    opts.push({
+      name: "Go for it", available: true,
+      wp: p * wS + (1 - p) * wF, ep: p * eS + (1 - p) * eF,
+      detail: "Convert " + fmtPct(p) + " (" + row.label + " to go" + (row.merged_3rd ? ", incl. 3rd downs" : "") +
+        ") · " + (td ? "TD if converted" : "1st down at " + fmtYl(s.yl - s.togo)),
+    });
+  }
+
+  // PUNT: touchback with the bucket's rate, otherwise the median non-touchback net.
+  {
+    const row = T.punt_table.find((r) => s.yl >= r.yardline_lo && s.yl <= r.yardline_hi);
+    if (row) {
+      const t = s.secs - tc.punt, tb = row.touchback_rate, tbYl = R.punt_touchback_yardline_100;
+      const land = clamp(F - (s.yl - row.median_net_yards_non_touchback), YL_MIN, YL_MAX);
+      opts.push({
+        name: "Punt", available: true,
+        wp: tb * wpOppBall(s.sd, tbYl, t, s.spread) + (1 - tb) * wpOppBall(s.sd, land, t, s.spread),
+        ep: -(tb * ep(tbYl) + (1 - tb) * ep(land)),
+        detail: "Net " + row.median_net_yards_non_touchback + " yds (median) · touchback " + fmtPct(tb) +
+          " · they take over at " + fmtYl(F - land),
+      });
+    } else {
+      const first = T.punt_table[0].yardline_lo;
+      opts.push({ name: "Punt", available: false, detail: "No punt data closer than " + fmtYl(first) + " yard line" });
+    }
+  }
+
+  // FIELD GOAL: logistic make probability; miss -> kick spot or the cap, whichever is better for them.
+  {
+    const dist = s.yl + R.fg_los_to_kick_distance;
+    if (dist <= R.fg_max_attempt_distance) {
+      const t = s.secs - tc.field_goal;
+      const p = 1 / (1 + Math.exp(-(T.fg.a + T.fg.b * dist)));
+      const missYl = Math.min(F - s.yl - R.fg_miss_spot_offset, R.fg_miss_max_yardline_100_for_opp);
+      opts.push({
+        name: "Field goal", available: true,
+        wp: p * wpOppBall(s.sd + R.fg_points, kick, t, s.spread) + (1 - p) * wpOppBall(s.sd, missYl, t, s.spread),
+        ep: p * (R.fg_points - ep(kick)) + (1 - p) * -ep(missYl),
+        detail: dist + "-yd try · make " + fmtPct(p) + " · miss: they take over at " + fmtYl(F - missYl),
+      });
+    } else {
+      opts.push({ name: "Field goal", available: false,
+        detail: dist + "-yd try is beyond the " + R.fg_max_attempt_distance + "-yd limit" });
+    }
+  }
+  return opts;
+}
+
+function verdict(opts) {
+  const av = opts.filter((o) => o.available).sort((a, b) => b.wp - a.wp);
+  const best = av[0], second = av[1];
+  if (!second) return { best, text: best.name, sub: "Only available option" };
+  const gap = (best.wp - second.wp) * PCT;
+  const band = H.tossup.noise_band;
+  const inBand = best.wp >= band[0] && best.wp <= band[1];
+  const tossMax = inBand ? H.tossup.noise_band_tossup_max_wp_pts : H.tossup.tossup_max_wp_pts;
+  const text = gap <= tossMax ? "Toss-up" : gap <= H.tossup.lean_max_wp_pts ? "Lean: " + best.name : best.name;
+  return {
+    best, text,
+    sub: best.name + " by " + gap.toFixed(1) + " WP pts over " + second.name.toLowerCase() +
+      " (toss-up ≤ " + tossMax + ", lean ≤ " + H.tossup.lean_max_wp_pts + " — heuristic)",
+  };
+}
+
+let side = U.defaults.side;
+const num = (id) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : 0; };
+
+function readState() {
+  const q = clamp(Math.round(num("qtr")), 1, U.quarters);
+  const clock = clamp(num("min") * SEC_PER_MIN + num("sec"), 0, R.quarter_seconds);
+  const yard = clamp(Math.round(num("yard")), 1, MID);
+  const yl = clamp(side === "own" ? F - yard : yard, YL_MIN, YL_MAX);
+  return {
+    sd: num("own") - num("opp"),
+    secs: (U.quarters - q) * R.quarter_seconds + clock,
+    yl,
+    togo: clamp(Math.round(num("togo")), 1, yl),
+    spread: num("spread"),
+  };
+}
+
+function render() {
+  const opts = evaluate(readState());
+  const v = verdict(opts);
+  $("verdict").textContent = v.text;
+  $("verdict-sub").textContent = v.sub;
+  const box = $("options");
+  box.replaceChildren();
+  for (const o of opts) {
+    const el = document.createElement("div");
+    el.className = "opt" + (o.available ? "" : " na") + (o === v.best ? " best" : "");
+    const head = document.createElement("div"); head.className = "opt-head";
+    const nm = document.createElement("span"); nm.className = "opt-name"; nm.textContent = o.name;
+    const w = document.createElement("span"); w.className = "opt-wp";
+    w.textContent = o.available ? fmtPct(o.wp) : "n/a";
+    head.append(nm, w); el.append(head);
+    if (o.available) {
+      const bar = document.createElement("div"); bar.className = "bar";
+      const fill = document.createElement("i"); fill.style.width = (o.wp * PCT) + "%";
+      bar.append(fill); el.append(bar);
+    }
+    const d = document.createElement("div"); d.className = "opt-detail";
+    d.textContent = o.available ? "EP " + fmtEp(o.ep) + " · " + o.detail : o.detail;
+    el.append(d); box.append(el);
+  }
+}
+
+function li(html) { const e = document.createElement("li"); e.innerHTML = html; return e; }
+const HTAG = ' <span class="tag">heuristic</span>';
+
+function init() {
+  const d = U.defaults, m = T.meta;
+  $("sub").textContent = "Heuristic WP · nflverse data " + m.seasons[0] + "–" + m.seasons[1] +
+    " · tables built " + m.build_date;
+  for (let q = 1; q <= U.quarters; q++) {
+    const o = document.createElement("option"); o.value = q; o.textContent = "Q" + q; $("qtr").append(o);
+  }
+  const attrs = {
+    min: { min: 0, max: Math.floor(R.quarter_seconds / SEC_PER_MIN) },
+    sec: { min: 0, max: SEC_PER_MIN - 1 },
+    yard: { min: 1, max: MID },
+    togo: { min: 1, max: YL_MAX },
+    spread: { step: d.spread_step },
+  };
+  for (const [id, a] of Object.entries(attrs)) for (const [k, val] of Object.entries(a)) $(id).setAttribute(k, val);
+  $("own").value = d.own_score; $("opp").value = d.opp_score; $("qtr").value = d.quarter;
+  $("min").value = d.clock_minutes; $("sec").value = String(d.clock_seconds).padStart(2, "0");
+  $("yard").value = d.yard; $("togo").value = d.ydstogo; $("spread").value = d.posteam_spread;
+
+  const setSide = (sd) => {
+    side = sd;
+    for (const b of document.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.side === sd));
+    render();
+  };
+  for (const b of document.querySelectorAll(".seg button")) b.addEventListener("click", () => setSide(b.dataset.side));
+  for (const id of ["own", "opp", "qtr", "min", "sec", "yard", "togo", "spread"]) {
+    $(id).addEventListener("input", render);
+    $(id).addEventListener("change", render);
+  }
+
+  const tc = H.time_costs_seconds, merged = T.conv_table.filter((r) => r.merged_3rd).map((r) => r.label);
+  const ul = $("assumptions");
+  ul.append(
+    li("Win probability = Φ((score diff + EP + spread × time left) / (σ × √time left)), " +
+       "σ = " + H.wp.sigma + " pts per game, time floor " + H.wp.min_seconds + " s." + HTAG),
+    li("Toss-up if the gap ≤ " + H.tossup.tossup_max_wp_pts + " WP pts (≤ " +
+       H.tossup.noise_band_tossup_max_wp_pts + " when the best WP is " + fmtPct(H.tossup.noise_band[0]) + "–" +
+       fmtPct(H.tossup.noise_band[1]) + "); lean ≤ " + H.tossup.lean_max_wp_pts + "." + HTAG),
+    li("Clock used: go " + tc.go + " s, punt " + tc.punt + " s, field goal " + tc.field_goal + " s." + HTAG),
+    li("EP: mean nflverse EP on 1st & 10 by yard line, rolling mean (" + m.row_counts.ep_table.toLocaleString() + " plays)."),
+    li("Conversion: 4th-down run/pass success by yards to go (" + m.row_counts.conv_table_4th.toLocaleString() +
+       " attempts); 3rd downs merged into sparse buckets: " + (merged.length ? merged.join(", ") : "none") +
+       ". A converted play gains exactly the line to gain."),
+    li("Field goal: logistic fit on " + T.fg.n.toLocaleString() + " attempts (blocked = miss); kick distance = yard line + " +
+       R.fg_los_to_kick_distance + "."),
+    li("Punt: median net yards and touchback rate by " + (T.punt_table[0].yardline_hi - T.punt_table[0].yardline_lo + 1) +
+       "-yard bucket (" + m.row_counts.punt_table.toLocaleString() + " punts); touchback puts the ball at " +
+       fmtYl(F - R.punt_touchback_yardline_100) + ". Blocks, muffs and penalties ignored."),
+    li("After a score the opponent starts at " + fmtYl(F - R.kickoff_start_yardline_100) + " (" + R.season +
+       " kickoff rules); TD = " + R.td_points + " pts incl. PAT."),
+    li("Not modelled: timeouts, end-of-game kneel-outs, team or kicker strength. Late in close games this WP is unreliable."),
+  );
+  setSide(side);
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,1210 @@
+<meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Spatial Puzzles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one full-bleed stage; quiet type pinned to the corners, nothing in the middle but the object. */
+:root{
+  --bg:#E4E6E8; --bg-lift:#F1F2F3; --ink:#1D2024; --mute:#767C84; --line:rgba(29,32,36,.16); --accent:#8E7149;
+  --plinth:#DADCDF; --veil:rgba(228,230,232,.82);
+  --display:"Instrument Serif","Iowan Old Style",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#131518; --bg-lift:#1D2024; --ink:#E6E3DE; --mute:#8B9199; --line:rgba(230,227,222,.16); --accent:#C8A674;
+  --plinth:#23272C; --veil:rgba(19,21,24,.8); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#131518; --bg-lift:#1D2024; --ink:#E6E3DE; --mute:#8B9199; --line:rgba(230,227,222,.16); --accent:#C8A674;
+  --plinth:#23272C; --veil:rgba(19,21,24,.8); color-scheme:dark }
+
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;overflow:hidden;background-color:var(--bg);
+  background-image:radial-gradient(110% 80% at 50% 42%,var(--bg-lift),var(--bg) 70%);
+  color:var(--ink);font-family:var(--mono);-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#stage:active{cursor:grabbing}
+
+.hud{position:fixed;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;pointer-events:none;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.hud.top{top:0;padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.hud.bottom{bottom:0;align-items:flex-end;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+.hud > *{pointer-events:auto}
+
+.titleblock{display:grid;gap:10px}
+.tabs{display:flex;gap:4px;margin-left:-8px}
+.tab{font:inherit;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);background:none;border:0;
+  padding:6px 8px;cursor:pointer;border-radius:4px}
+.tab[aria-pressed="true"]{color:var(--ink);box-shadow:inset 0 -1px 0 var(--ink)}
+.lvl{display:flex;align-items:baseline;gap:12px}
+.lvl .num{font-family:var(--display);font-style:italic;font-size:44px;line-height:.9;color:var(--accent);font-variant-numeric:tabular-nums}
+.lvl .name{font-family:var(--display);font-size:22px;line-height:1}
+.label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.score{text-align:right;display:grid;gap:4px;justify-items:end;font-variant-numeric:tabular-nums;padding-top:6px}
+.score .val{font-family:var(--display);font-size:30px;line-height:.9}
+.score .par{font-size:11px;color:var(--mute);letter-spacing:.06em}
+
+.hint{pointer-events:none;font-size:11px;line-height:1.6;color:var(--mute);max-width:24ch;letter-spacing:.02em;transition:opacity .6s;margin:0}
+.controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dot{width:24px;height:26px;padding:0;border:0;background:none;display:grid;place-items:center;cursor:pointer;border-radius:50%}
+.dot::after{content:"";width:6px;height:6px;border-radius:50%;border:1px solid var(--mute);transition:all .3s}
+.dot[aria-current="true"]::after{background:var(--ink);border-color:var(--ink);transform:scale(1.15)}
+.dot.done::after{background:var(--accent);border-color:var(--accent)}
+#tdots{gap:1px;flex-wrap:nowrap} #tdots .dot{width:22px}
+.btn{font:inherit;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);background:none;
+  border:1px solid var(--line);border-radius:999px;padding:9px 14px;cursor:pointer;transition:border-color .2s,opacity .2s}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.35;cursor:default;border-color:var(--line)}
+.ico{font:inherit;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);
+  background:none;color:var(--ink);cursor:pointer;padding:0}
+.ico:disabled{opacity:.3;cursor:default}
+.ico svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.btn:focus-visible,.dot:focus-visible,.tab:focus-visible,.ico:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+.icons{display:flex;gap:6px}
+
+.foot{position:fixed;left:0;right:0;bottom:0;display:grid;gap:12px;pointer-events:none;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));
+  padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+.foot > *{min-width:0}
+.foot .row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;pointer-events:auto}
+.status{margin:0;font-size:12px;line-height:1.55;color:var(--mute);max-width:46ch;min-height:3.1em;letter-spacing:.01em}
+.status b{color:var(--ink);font-weight:500}
+.chips{display:flex;gap:2px;flex-wrap:wrap;min-height:28px;align-items:center}
+.chip{font-size:13px;padding:4px 7px;border-radius:5px;color:var(--mute);font-variant-numeric:tabular-nums;transition:background .2s,color .2s}
+.chip.past{color:var(--ink)}
+.chip.now{background:var(--line);color:var(--ink)}
+.legend{display:flex;gap:14px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);align-items:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend .sq{border-radius:2px;background:none;border:1.5px solid var(--mute)}
+
+.veil{position:fixed;inset:0;background:var(--veil);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:grid;place-items:center;text-align:center;pointer-events:none;opacity:0;transition:opacity .9s ease}
+.veil.show{opacity:1;pointer-events:auto}
+.veil .inner{display:grid;gap:14px;justify-items:center;padding:24px;transform:translateY(8px);transition:transform .9s ease}
+.veil.show .inner{transform:none}
+.veil h2{margin:0;font-family:var(--display);font-weight:400;font-style:italic;font-size:clamp(44px,12vw,72px);line-height:1;text-wrap:balance}
+.veil p{margin:0 0 6px;font-size:12px;color:var(--mute);letter-spacing:.04em;max-width:32ch;line-height:1.6}
+.veil .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+
+@media (max-width:420px){ .hint{max-width:20ch} .lvl .num{font-size:38px} .status{font-size:11.5px} }
+@media (prefers-reduced-motion: reduce){ .veil,.veil .inner,.dot::after{transition:none} }
+</style>
+
+<canvas id="stage" aria-label="Puzzle stage"></canvas>
+
+<header class="hud top">
+  <div class="titleblock">
+    <nav class="tabs" aria-label="Mode">
+      <button class="tab" type="button" data-mode="pieces" aria-pressed="true">Pieces</button>
+      <button class="tab" type="button" data-mode="tumble" aria-pressed="false">Tumble</button>
+      <button class="tab" type="button" data-mode="foresee" aria-pressed="false">Foresee</button>
+    </nav>
+    <div class="lvl"><span class="num" id="lvlNum">I</span><span class="name" id="lvlName">Collar</span></div>
+  </div>
+  <div class="score">
+    <span class="label" id="scoreLabel">Moves</span>
+    <span class="val" id="moves">0</span>
+    <span class="par" id="par">par 3</span>
+  </div>
+</header>
+
+<footer class="hud bottom" id="piecesFoot">
+  <p class="hint" id="hint">Turn it over before you touch it. Tap a piece to slide it free.</p>
+  <div class="controls">
+    <nav class="dots" id="dots" aria-label="Puzzles"></nav>
+    <button class="btn" id="reset" type="button">Reset</button>
+  </div>
+</footer>
+
+<footer class="foot" id="tumbleFoot" hidden>
+  <p class="hint" id="thint" style="max-width:34ch">Swipe to roll. A well paints the face that lands on it. Press that face onto the matching square to stamp it.</p>
+  <div class="row">
+    <div class="icons">
+      <button class="ico" id="turnL" type="button" aria-label="Turn view left"><svg viewBox="0 0 16 16"><path d="M3.5 6.5A5 5 0 1 1 4 11"/><path d="M3 3.5v3h3"/></svg></button>
+      <button class="ico" id="turnR" type="button" aria-label="Turn view right"><svg viewBox="0 0 16 16"><path d="M12.5 6.5A5 5 0 1 0 12 11"/><path d="M13 3.5v3h-3"/></svg></button>
+      <button class="ico" id="undo" type="button" aria-label="Undo roll"><svg viewBox="0 0 16 16"><path d="M6 4L3 7l3 3"/><path d="M3 7h6.5a3.5 3.5 0 0 1 0 7H8"/></svg></button>
+    </div>
+    <div class="controls">
+      <nav class="dots" id="tdots" aria-label="Boards"></nav>
+      <button class="btn" id="restart" type="button">Restart</button>
+    </div>
+  </div>
+</footer>
+
+<footer class="foot" id="foreFoot" hidden>
+  <p class="status" id="fstatus" aria-live="polite"></p>
+  <div class="chips" id="fchips" aria-label="Turns"></div>
+  <div class="row">
+    <span></span>
+    <div class="icons">
+      <button class="btn" id="freplay" type="button" hidden>Replay</button>
+      <button class="btn primary" id="fnext" type="button" hidden>Next</button>
+    </div>
+  </div>
+</footer>
+
+<div class="veil" id="veil" role="dialog" aria-live="polite">
+  <div class="inner">
+    <h2 id="veilTitle">Solved.</h2>
+    <p id="veilText"></p>
+    <div class="btns">
+      <button class="btn" id="veilAlt" type="button" hidden>Watch</button>
+      <button class="btn primary" id="veilBtn" type="button">Next puzzle</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ================= Cube logic (pure) ================= */
+function CubeCore(n){
+  const M = n - 1;
+  const NORM = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  const K = (p,q) => p[0]+","+p[1]+","+p[2]+"|"+q[0]+","+q[1]+","+q[2];
+  const st = [], idx = new Map();
+  NORM.forEach(q => {
+    const a = q[0] ? 0 : q[1] ? 1 : 2, o = [0,1,2].filter(i => i !== a);
+    for (let u = -M; u <= M; u += 2) for (let v = -M; v <= M; v += 2){
+      const p = [0,0,0]; p[a] = q[a]*M; p[o[0]] = u; p[o[1]] = v;
+      idx.set(K(p,q), st.length); st.push({p, q, a});
+    }
+  });
+  const S = st.length;
+  function rot(v, a, k){ let x=v[0], y=v[1], z=v[2];
+    for (let i = 0; i < ((k%4)+4)%4; i++){
+      if (a === 0){ const t = y; y = -z; z = t; }
+      else if (a === 1){ const t = z; z = -x; x = t; }
+      else { const t = x; x = -y; y = t; }
+    } return [x,y,z]; }
+  const moves = [];
+  for (let a = 0; a < 3; a++) for (let li = 0; li < n; li++){
+    const L = -M + 2*li;
+    for (let k = 1; k <= 3; k++){
+      const perm = new Int16Array(S);
+      for (let s = 0; s < S; s++){ const {p,q} = st[s]; perm[s] = p[a] === L ? idx.get(K(rot(p,a,k), rot(q,a,k))) : s; }
+      moves.push({a, li, L, k, perm});
+    }
+  }
+  const NM = moves.length;
+  const inv = m => m - (moves[m].k - 1) + (3 - moves[m].k);
+  // Pieces (cubies) and the states each can reach, keyed by its first sticker's position.
+  const byCubie = new Map();
+  st.forEach((s,i) => { const k = s.p.join(","); if (!byCubie.has(k)) byCubie.set(k, []); byCubie.get(k).push(i); });
+  const pieces = [...byCubie.values()].map(ids => ({ids}));
+  const pieceOf = new Int16Array(S);
+  pieces.forEach((pc,pi) => pc.ids.forEach(i => pieceOf[i] = pi));
+  pieces.forEach(pc => {
+    const states = [pc.ids.slice()], map = new Map([[pc.ids[0], 0]]), rows = [];
+    for (let i = 0; i < states.length; i++){
+      const row = new Int16Array(NM);
+      for (let m = 0; m < NM; m++){
+        const nx = states[i].map(s => moves[m].perm[s]);
+        let j = map.get(nx[0]);
+        if (j === undefined){ j = states.length; map.set(nx[0], j); states.push(nx); }
+        row[m] = j;
+      }
+      rows.push(row);
+    }
+    pc.states = states; pc.map = map;
+    pc.trans = new Int16Array(states.length * NM);
+    rows.forEach((r,i) => pc.trans.set(r, i*NM));
+  });
+  // 24 whole-cube rotations as functions on sticker positions
+  const rots = [];
+  (function(){
+    const seen = new Set(), queue = [[[1,0,0],[0,1,0],[0,0,1]]];
+    const mul = (A,B) => A.map(r => [0,1,2].map(j => r[0]*B[0][j] + r[1]*B[1][j] + r[2]*B[2][j]));
+    const RX = [[1,0,0],[0,0,-1],[0,1,0]], RY = [[0,0,1],[0,1,0],[-1,0,0]];
+    while (queue.length){ const R = queue.shift(), key = R.flat().join(","); if (seen.has(key)) continue; seen.add(key); rots.push(R); queue.push(mul(RX,R), mul(RY,R)); }
+  })();
+  const ap = (R,v) => [0,1,2].map(i => R[i][0]*v[0] + R[i][1]*v[1] + R[i][2]*v[2]);
+  const rotPos = rots.map(R => { const t = new Int16Array(S); st.forEach((s,i) => t[i] = idx.get(K(ap(R,s.p), ap(R,s.q)))); return t; });
+  function name(m){
+    const mv = moves[m], F = [["L","R"],["D","U"],["B","F"]], MID = ["M","E","S"];
+    let base, cw;
+    if (mv.L > 0){ const d = (M - mv.L)/2 + 1; base = (d > 1 ? d : "") + F[mv.a][1]; cw = 3; }
+    else if (mv.L < 0){ const d = (mv.L + M)/2 + 1; base = (d > 1 ? d : "") + F[mv.a][0]; cw = 1; }
+    else { base = MID[mv.a]; cw = mv.a === 2 ? 3 : 1; }
+    return base + (mv.k === 2 ? "2" : mv.k === cw ? "" : "′");
+  }
+  return {n, M, st, idx, K, S, moves, NM, inv, pieces, pieceOf, rotPos, name,
+    axis: moves.map(m => m.a), li: moves.map(m => m.li)};
+}
+
+</script>
+<script>
+(function(){
+"use strict";
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+function roundedSquare(w, r, hole){
+  const s = hole ? new THREE.Path() : new THREE.Shape(), x = w/2;
+  s.moveTo(-x+r,-x); s.lineTo(x-r,-x); s.quadraticCurveTo(x,-x,x,-x+r); s.lineTo(x,x-r); s.quadraticCurveTo(x,x,x-r,x);
+  s.lineTo(-x+r,x); s.quadraticCurveTo(-x,x,-x,x-r); s.lineTo(-x,-x+r); s.quadraticCurveTo(-x,-x,-x+r,-x);
+  return s;
+}
+/* ================= Shared stage ================= */
+const canvas = $("stage");
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+
+(function(){
+  const pm = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(20,32,16), new THREE.MeshBasicMaterial({color:0x2c2f34, side:THREE.BackSide})));
+  const panel = (w,h,p,v) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color:new THREE.Color(v,v,v), side:THREE.DoubleSide})); m.position.set(p[0],p[1],p[2]); m.lookAt(0,0,0); env.add(m); };
+  panel(12,8,[0,13,3],3.2); panel(6,12,[-13,3,3],1.7); panel(6,8,[11,2,-8],1.1); panel(24,2.5,[0,-5,12],0.6);
+  scene.environment = pm.fromScene(env, 0.04).texture;
+  pm.dispose();
+})();
+
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(2.2, 6, 3);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, {left:-2.6,right:2.6,top:2.6,bottom:-2.6,near:1,far:15});
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 5;
+scene.add(key);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f96, 0.25));
+
+const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+const MATS = {
+  porcelain: () => new THREE.MeshPhysicalMaterial({color:lin("#ECE9E4"), roughness:0.42, metalness:0, clearcoat:0.7, clearcoatRoughness:0.25}),
+  graphite:  () => new THREE.MeshPhysicalMaterial({color:lin("#2A2D32"), roughness:0.34, metalness:0.25, clearcoat:0.5, clearcoatRoughness:0.3}),
+  brass:     () => new THREE.MeshPhysicalMaterial({color:lin("#B8996A"), roughness:0.3, metalness:1}),
+  post:      () => new THREE.MeshStandardMaterial({color:lin("#A9ADB2"), roughness:0.55, metalness:0.6})
+};
+
+const Y_TOP = -0.94;
+const plinthMat = new THREE.MeshStandardMaterial({roughness:0.9, metalness:0});
+const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.58, 0.08, 120), plinthMat);
+plinth.position.y = Y_TOP - 0.04; plinth.receiveShadow = true; scene.add(plinth);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(14,14), new THREE.ShadowMaterial({opacity:0.12}));
+floor.rotation.x = -Math.PI/2; floor.position.y = Y_TOP - 0.081; floor.receiveShadow = true; scene.add(floor);
+let accentHex = "#8E7149";
+const themeListeners = [];
+function syncTheme(){
+  const cs = getComputedStyle(document.documentElement);
+  plinthMat.color = lin(cs.getPropertyValue("--plinth").trim() || "#DADCDF");
+  accentHex = cs.getPropertyValue("--accent").trim() || "#8E7149";
+  themeListeners.forEach(f => f());
+}
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", syncTheme);
+new MutationObserver(syncTheme).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+
+const tweens = [];
+const ease = { io: k => k<.5 ? 4*k*k*k : 1-Math.pow(-2*k+2,3)/2, in: k => k*k*k, out: k => 1-Math.pow(1-k,3) };
+function tween(dur, fn, e){ return new Promise(res => tweens.push({t0:performance.now(), dur:reduce?Math.min(dur,200):dur, fn, e:e||ease.io, res})); }
+
+const orbit = {theta:0, phi:1.12, r:6, targetTheta:0, targetPhi:1.12, zoom:1, touched:false};
+const target = new THREE.Vector3(0, -0.05, 0);
+let mode = "pieces";
+
+/* ================= Pieces mode ================= */
+const PIECES = (function(){
+  const LEVELS = [
+    { num:"I", name:"Collar", view:0.55, pieces:[
+      { id:"pin",  kind:"pin",  axis:"x", at:[0,0.35,0], len:1.6, head:-1, mat:"brass", posts:[-0.62,0.62], blockers:[] },
+      { id:"pipe", kind:"pipe", mat:"graphite", blockers:["pin"] },
+      { id:"ring", kind:"ring", y:Y_TOP+0.07, mat:"porcelain", blockers:["pipe"] } ]},
+    { num:"II", name:"Crossbar", view:-1.25, pieces:[
+      { id:"a",    kind:"pin",  axis:"x", at:[0,0.35,0], len:1.6, head:1, mat:"brass", posts:[-0.62,0.62], blockers:["b"] },
+      { id:"b",    kind:"pin",  axis:"z", at:[1.06,0.35,0], len:1.2, head:1, mat:"porcelain", posts:[-0.4,0.4], blockers:[] },
+      { id:"pipe", kind:"pipe", mat:"graphite", blockers:["a"] },
+      { id:"ring", kind:"ring", y:Y_TOP+0.07, mat:"brass", blockers:["pipe"] } ]},
+    { num:"III", name:"Lattice", view:-2.3, pieces:[
+      { id:"a",    kind:"pin",  axis:"x", at:[0,0.5,0], len:1.6, head:1, mat:"brass", posts:[-0.62,0.62], blockers:["c"] },
+      { id:"b",    kind:"pin",  axis:"z", at:[0,0.02,0], len:1.6, head:-1, mat:"porcelain", posts:[-0.62,0.62], blockers:["d"] },
+      { id:"c",    kind:"pin",  axis:"z", at:[1.06,0.5,0], len:1.2, head:-1, mat:"graphite", posts:[-0.4,0.4], blockers:[] },
+      { id:"d",    kind:"pin",  axis:"x", at:[0,0.02,-1.06], len:1.2, head:1, mat:"brass", posts:[-0.4,0.4], blockers:[] },
+      { id:"pipe", kind:"pipe", mat:"graphite", blockers:["a","b"] },
+      { id:"ring", kind:"ring", y:Y_TOP+0.07, mat:"porcelain", blockers:["pipe"] } ]}
+  ];
+  function shade(m){ m.castShadow = true; m.receiveShadow = true; return m; }
+  function buildPipe(mat){
+    const g = new THREE.Group(), top = 0.92;
+    const prof = [[0.155,top+0.05],[0.155,Y_TOP+0.002],[0.2,Y_TOP+0.002],[0.2,top],[0.35,top],[0.375,top+0.012],[0.38,top+0.03],[0.37,top+0.045],[0.35,top+0.05],[0.155,top+0.05]].map(p => new THREE.Vector2(p[0], p[1]));
+    mat.side = THREE.DoubleSide;
+    g.add(shade(new THREE.Mesh(new THREE.LatheGeometry(prof, 96), mat)));
+    return {group:g, exit:new THREE.Vector3(0,1,0)};
+  }
+  function buildRing(p, mat){
+    const m = shade(new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.07, 40, 120), mat));
+    const g = new THREE.Group(); g.add(m); m.rotation.x = Math.PI/2; g.position.y = p.y;
+    return {group:g, exit:new THREE.Vector3(0,1,0)};
+  }
+  function buildPin(p, mat, statics){
+    const g = new THREE.Group();
+    const shaft = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,p.len,40), mat));
+    const head = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.07,48), mat));
+    head.position.y = p.head * (p.len/2 + 0.035);
+    const bevel = shade(new THREE.Mesh(new THREE.TorusGeometry(0.085,0.016,16,48), mat));
+    bevel.rotation.x = Math.PI/2; bevel.position.y = p.head * (p.len/2 + 0.07);
+    const tip = shade(new THREE.Mesh(new THREE.SphereGeometry(0.05,32,16), mat));
+    tip.position.y = -p.head * p.len/2;
+    const inner = new THREE.Group(); inner.add(shaft, head, bevel, tip);
+    if (p.axis === "x") inner.rotation.z = -Math.PI/2; else inner.rotation.x = Math.PI/2;
+    g.add(inner); g.position.set(...p.at);
+    const pm = MATS.post();
+    (p.posts||[]).forEach(o => {
+      const pos = new THREE.Vector3(...p.at);
+      if (p.axis === "x") pos.x += o; else pos.z += o;
+      const h = pos.y - 0.08 - Y_TOP;
+      const post = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.03,h,24), pm));
+      post.position.set(pos.x, Y_TOP + h/2, pos.z);
+      const eye = shade(new THREE.Mesh(new THREE.TorusGeometry(0.075,0.022,16,48), pm));
+      eye.position.copy(pos); if (p.axis === "x") eye.rotation.y = Math.PI/2;
+      const foot = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.08,0.02,32), pm));
+      foot.position.set(pos.x, Y_TOP + 0.01, pos.z);
+      statics.add(post, eye, foot);
+    });
+    return {group:g, exit: p.axis === "x" ? new THREE.Vector3(p.head,0,0) : new THREE.Vector3(0,0,p.head)};
+  }
+
+  let levelIdx = 0, pieces = [], world = null, moves = 0, solved = false;
+  const done = new Set(store.get("p3d-done", []));
+  const best = i => +store.get("p3d-best-"+i, 0) || 0;
+
+  function buildLevel(i){
+    if (world){ scene.remove(world); world.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+    levelIdx = i; moves = 0; solved = false;
+    world = new THREE.Group(); world.visible = mode === "pieces"; scene.add(world);
+    const statics = new THREE.Group(); world.add(statics);
+    const L = LEVELS[i];
+    pieces = L.pieces.map(p => {
+      const mat = MATS[p.mat]();
+      const b = p.kind === "pipe" ? buildPipe(mat) : p.kind === "ring" ? buildRing(p, mat) : buildPin(p, mat, statics);
+      const piece = {def:p, group:b.group, exit:b.exit, mat, home:b.group.position.clone(), removed:false, moving:false, glow:0};
+      b.group.traverse(o => { if (o.isMesh) o.userData.piece = piece; });
+      world.add(b.group);
+      return piece;
+    });
+    $("lvlNum").textContent = L.num; $("lvlName").textContent = L.name;
+    hud();
+    renderDots();
+    orbit.targetTheta = L.view; if (!orbit.touched) orbit.theta = L.view;
+    orbit.phi = orbit.targetPhi = 1.12;
+    $("veil").classList.remove("show");
+  }
+  function hud(){
+    if (mode !== "pieces") return;
+    $("scoreLabel").textContent = "Moves";
+    $("lvlNum").textContent = LEVELS[levelIdx].num; $("lvlName").textContent = LEVELS[levelIdx].name;
+    $("moves").textContent = moves;
+    $("par").textContent = "par " + LEVELS[levelIdx].pieces.length + (best(levelIdx) ? "  ·  best " + best(levelIdx) : "");
+  }
+  function renderDots(){
+    const nav = $("dots"); nav.textContent = "";
+    LEVELS.forEach((L,i) => {
+      const b = document.createElement("button");
+      b.className = "dot" + (done.has(i) ? " done" : ""); b.type = "button";
+      b.setAttribute("aria-label", "Puzzle " + L.num + ", " + L.name);
+      b.setAttribute("aria-current", i === levelIdx ? "true" : "false");
+      b.addEventListener("click", () => buildLevel(i));
+      nav.appendChild(b);
+    });
+  }
+  async function tryMove(piece){
+    if (solved || piece.removed || piece.moving) return;
+    moves++; hud();
+    $("hint").style.opacity = "0";
+    const holding = piece.def.blockers.map(id => pieces.find(p => p.def.id === id)).filter(p => p && !p.removed);
+    piece.moving = true;
+    const from = piece.home.clone();
+    if (holding.length){
+      holding.forEach(h => h.glow = 1);
+      const d = piece.exit.clone().multiplyScalar(0.07);
+      await tween(160, k => piece.group.position.copy(from).addScaledVector(d, k), ease.out);
+      await tween(420, k => { const s = 1 - k, w = Math.sin(k*Math.PI*3) * 0.25 * (1-k); piece.group.position.copy(from).addScaledVector(d, s + w*s); }, ease.out);
+      piece.group.position.copy(from); piece.moving = false;
+      return;
+    }
+    piece.removed = true; piece.mat.transparent = true;
+    await tween(1100, k => { piece.group.position.copy(from).addScaledVector(piece.exit, 3.4*k); piece.mat.opacity = k < .45 ? 1 : 1 - (k-.45)/.55; }, ease.io);
+    piece.group.visible = false; piece.moving = false;
+    if (pieces.every(p => p.removed)) finish();
+  }
+  function finish(){
+    solved = true;
+    const par = LEVELS[levelIdx].pieces.length;
+    done.add(levelIdx); store.set("p3d-done", [...done]); renderDots();
+    if (!best(levelIdx) || moves < best(levelIdx)) store.set("p3d-best-"+levelIdx, moves);
+    const last = levelIdx === LEVELS.length - 1;
+    $("veilTitle").textContent = moves === par ? "Clean." : "Solved.";
+    $("veilText").textContent = moves === par ? par + " moves, none wasted. You saw it before you touched it." : moves + " moves. It comes apart in " + par + ".";
+    $("veilBtn").textContent = last ? "Start over" : "Next puzzle";
+    $("veilBtn").onclick = () => buildLevel(last ? 0 : levelIdx + 1);
+    $("veilAlt").hidden = true;
+    setTimeout(() => { $("veil").classList.add("show"); $("veilBtn").focus({preventScroll:true}); }, 350);
+  }
+  $("reset").addEventListener("click", () => buildLevel(levelIdx));
+  const ray = new THREE.Raycaster();
+  function tap(ndc){
+    ray.setFromCamera(ndc, camera);
+    const targets = []; pieces.forEach(p => { if (!p.removed) p.group.traverse(o => { if (o.isMesh) targets.push(o); }); });
+    const hit = ray.intersectObjects(targets, false)[0];
+    if (hit) tryMove(hit.object.userData.piece);
+  }
+  function tick(){
+    pieces.forEach(p => { if (p.glow > 0){ p.glow = Math.max(0, p.glow - 0.022); const g = Math.sin(p.glow*Math.PI)*0.35; p.mat.emissive.setRGB(g*0.9, g*0.7, g*0.45); } });
+  }
+  function show(on){
+    if (world) world.visible = on; plinth.visible = on;
+    if (on){ floor.position.y = Y_TOP - 0.081; hud(); orbit.targetTheta = LEVELS[levelIdx].view; orbit.targetPhi = 1.12; }
+  }
+  return {buildLevel, tap, tick, show};
+})();
+
+/* ================= Tumble mode =================
+   A cube rolls across floating tiles. Rolling onto a well paints the face
+   that lands on it. Press a painted face onto a matching target to stamp it;
+   the stamp uses up the paint. Stamp every target. */
+const TUMBLE = (function(){
+  const LEVELS = [
+    {num:"I",    name:"Straight line",  rows:["Sa...A"],
+      hint:"<b>Swipe right.</b> The brass well paints the face beneath the cube. Four rolls bring that face back down onto the square."},
+    {num:"II",   name:"Hairpin",        rows:["S.a",". .","A.."],
+      hint:"Two rolls carry the paint to the top. Two more bring it down again, even around a corner."},
+    {num:"III",  name:"Open floor",     rows:["Sa.","...","..A"],
+      hint:"Any route works if the painted face is down when you arrive. The glow under the cube shows the bottom."},
+    {num:"IV",   name:"Long way round", rows:["S.a..",".....",".....","...A."],
+      hint:"The direct route arrives with the paint on a side. Find a longer one."},
+    {num:"V",    name:"Two wells",      rows:["Sa..A","b...B"],
+      hint:"Two colors. A well repaints the face beneath, so stamp brass before you take on sage."},
+    {num:"VI",   name:"Crossing",       rows:["a..A","S...","b..B"]},
+    {num:"VII",  name:"Two colors",     rows:["S.....","..aA..","......","..Bb.."]},
+    {num:"VIII", name:"Shelf",          rows:["S.a..","B...A","b...."]},
+    {num:"IX",   name:"Narrows",        rows:[" a.. ","A.S.B"," ..b "]},
+    {num:"X",    name:"Gallery",        rows:["a....A","..  ..","S.  ..","......","B...b."]},
+    {num:"XI",   name:"Columns",        rows:["A...a",". . .","S...B",". . .","b...C","c...."]},
+    {num:"XII",  name:"Compass",        rows:["..a..","A. .B","..S..","b. .C","..c.."]},
+    {num:"XIII", name:"Switchback",     rows:["S..a.","... .","A....","   B.","b...."]}
+  ];
+  const DEFAULT_HINT = "Swipe to roll. A well paints the face that lands on it. Press that face onto the matching square to stamp it.";
+  const COL = ["#B8996A","#7F9A86","#6E86A6"];
+  const DIRS = {E:[1,0], W:[-1,0], S:[0,1], N:[0,-1]};
+  const OPP = {E:"W", W:"E", N:"S", S:"N"};
+  const U = 0.52;
+  // faces: [top, bottom, north(-z), south(+z), east(+x), west(-x)]
+  function roll(f, d){ const [t,b,n,s,e,w] = f;
+    if (d === "E") return [w,e,n,s,t,b]; if (d === "W") return [e,w,n,s,b,t];
+    if (d === "S") return [n,s,b,t,e,w]; return [s,n,t,b,e,w]; }
+  function parse(rows){
+    const cells = new Map(), targets = []; let start = [0,0], cols = 0;
+    rows.forEach((r,z) => { cols = Math.max(cols, r.length); [...r].forEach((ch,x) => {
+      if (ch === " ") return;
+      const c = {x, z, t:"."};
+      if (ch === "S") start = [x,z];
+      else if ("abc".includes(ch)){ c.t = "p"; c.c = "abc".indexOf(ch); }
+      else if ("ABC".includes(ch)){ c.t = "g"; c.c = "ABC".indexOf(ch); c.i = targets.length; targets.push(c); }
+      cells.set(x+","+z, c);
+    }); });
+    return {cells, targets, start, cols, rowsN: rows.length};
+  }
+  function step(L, s, d){
+    const nx = s.x + DIRS[d][0], nz = s.z + DIRS[d][1], c = L.cells.get(nx+","+nz);
+    if (!c) return null;
+    let f = roll(s.f, d), mask = s.mask, ev = null;
+    if (c.t === "p"){ f = f.slice(); f[1] = c.c; ev = {type:"paint", c}; }
+    else if (c.t === "g" && !(mask >> c.i & 1) && f[1] === c.c){ mask |= 1 << c.i; f = f.slice(); f[1] = -1; ev = {type:"stamp", c}; }
+    return {x:nx, z:nz, f, mask, ev};
+  }
+  function solve(L){
+    const full = (1 << L.targets.length) - 1;
+    const s0 = {x:L.start[0], z:L.start[1], f:[-1,-1,-1,-1,-1,-1], mask:0};
+    const key = s => s.x+","+s.z+"|"+s.f.join(",")+"|"+s.mask;
+    let q = [[s0, ""]]; const seen = new Set([key(s0)]);
+    while (q.length){
+      const nq = [];
+      for (const [s, p] of q) for (const d of "NESW"){
+        const r = step(L, s, d); if (!r) continue;
+        if (r.mask === full) return p + d;
+        const k = key(r); if (seen.has(k)) continue; seen.add(k); nq.push([r, p + d]);
+      }
+      q = nq;
+    }
+    return "";
+  }
+
+  const root = new THREE.Group(); root.visible = false; scene.add(root);
+  const board = new THREE.Group(); root.add(board);
+  const tileMat = new THREE.MeshPhysicalMaterial({color:lin("#ECE9E4"), roughness:0.6, clearcoat:0.3, clearcoatRoughness:0.5});
+  const inkMat = new THREE.MeshBasicMaterial({color:lin("#1D2024"), transparent:true, opacity:0.18});
+  const colMats = COL.map(h => new THREE.MeshPhysicalMaterial({color:lin(h), roughness:0.38, metalness:0.08, clearcoat:0.6, clearcoatRoughness:0.25}));
+  const flatMats = COL.map(h => new THREE.MeshBasicMaterial({color:lin(h), side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-2}));
+  const glowMats = COL.map(h => new THREE.MeshBasicMaterial({color:lin(h), transparent:true, opacity:0.55, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-3}));
+  const bodyMat = new THREE.MeshPhysicalMaterial({color:lin("#24272C"), roughness:0.36, metalness:0.2, clearcoat:0.6, clearcoatRoughness:0.22});
+  const FACE_N = [[0,1,0],[0,-1,0],[0,0,-1],[0,0,1],[1,0,0],[-1,0,0]];
+  const UP = new THREE.Vector3(0,1,0), ZV = new THREE.Vector3(0,0,1);
+
+  const g = {
+    tile: new THREE.BoxGeometry(U*0.93, 0.14, U*0.93),
+    body: new THREE.BoxGeometry(U*0.97, U*0.97, U*0.97),
+    panel: new THREE.ShapeGeometry(roundedSquare(U*0.78, U*0.12)),
+    well: new THREE.CircleGeometry(U*0.27, 48),
+    ring: new THREE.RingGeometry(U*0.27, U*0.31, 48),
+    frame: (() => { const sh = roundedSquare(U*0.74, U*0.12); sh.holes.push(roundedSquare(U*0.6, U*0.07, true)); return new THREE.ShapeGeometry(sh); })(),
+    fill: new THREE.ShapeGeometry(roundedSquare(U*0.6, U*0.07)),
+    dot: new THREE.CircleGeometry(U*0.045, 20),
+    glow: new THREE.ShapeGeometry(roundedSquare(U*1.14, U*0.22))
+  };
+  const flat = (geo, mat, y) => { const m = new THREE.Mesh(geo, mat); m.rotation.x = -Math.PI/2; m.position.y = y; return m; };
+
+  // The cube
+  const cube = new THREE.Group();
+  const body = new THREE.Mesh(g.body, bodyMat); body.castShadow = true; body.receiveShadow = true; cube.add(body);
+  const panels = FACE_N.map(nv => {
+    const m = new THREE.Mesh(g.panel, colMats[0]);
+    const v = new THREE.Vector3(...nv);
+    m.position.copy(v).multiplyScalar(U*0.487); m.quaternion.setFromUnitVectors(ZV, v);
+    cube.add(m); return m;
+  });
+  const pivot = new THREE.Object3D(); root.add(pivot); root.add(cube);
+  const glow = flat(g.glow, glowMats[0], 0.004); root.add(glow);
+
+  let idx = store.get("p3d-tb2-lvl", 0), L, s, hist = [], tiles = new Map(), busy = false, queued = null, par = 0, sol = "", watching = false, won = false;
+  const done = new Set(store.get("p3d-tb2-done", []));
+
+  function load(i){
+    idx = i; store.set("p3d-tb2-lvl", i);
+    board.children.slice().forEach(c => board.remove(c));
+    tiles = new Map();
+    L = parse(LEVELS[i].rows);
+    const ox = (L.cols - 1)/2, oz = (L.rowsN - 1)/2;
+    root.position.set(-ox*U, 0, -oz*U);
+    for (const c of L.cells.values()){
+      const grp = new THREE.Group(); grp.position.set(c.x*U, 0, c.z*U);
+      const t = new THREE.Mesh(g.tile, tileMat); t.position.y = -0.07; t.receiveShadow = true; t.castShadow = true; grp.add(t);
+      const rec = {grp, c};
+      if (c.t === "p"){ grp.add(flat(g.well, flatMats[c.c], 0.002)); rec.ring = flat(g.ring, glowMats[c.c], 0.003); rec.ring.visible = false; grp.add(rec.ring); }
+      if (c.t === "g"){ grp.add(flat(g.frame, flatMats[c.c], 0.002)); rec.fill = flat(g.fill, flatMats[c.c], 0.003); rec.fill.scale.setScalar(0.001); rec.fill.visible = false; grp.add(rec.fill); }
+      rec.dot = flat(g.dot, inkMat, 0.004); rec.dot.visible = false; grp.add(rec.dot);
+      board.add(grp); tiles.set(c.x+","+c.z, rec);
+    }
+    sol = solve(L); par = sol.length;
+    const th = $("thint"); th.innerHTML = LEVELS[i].hint || (i >= 8 ? "" : DEFAULT_HINT); th.style.opacity = "";
+    reset();
+    orbit.targetTheta = 0.55; orbit.targetPhi = 0.82;
+    resize();
+    $("veil").classList.remove("show");
+  }
+  function reset(){
+    s = {x:L.start[0], z:L.start[1], f:[-1,-1,-1,-1,-1,-1], mask:0};
+    hist = []; won = false; queued = null;
+    for (const r of tiles.values()){ r.dot.visible = false; if (r.fill){ r.fill.visible = false; r.fill.scale.setScalar(0.001); } }
+    place(); hud();
+  }
+  function place(){
+    cube.position.set(s.x*U, U/2, s.z*U); cube.rotation.set(0,0,0);
+    panels.forEach((p,i) => { p.visible = s.f[i] >= 0; if (s.f[i] >= 0) p.material = colMats[s.f[i]]; });
+    glow.visible = s.f[1] >= 0;
+    if (s.f[1] >= 0){ glow.material = glowMats[s.f[1]]; glow.position.set(s.x*U, 0.004, s.z*U); }
+  }
+  function hud(){
+    if (mode !== "tumble") return;
+    $("scoreLabel").textContent = "Moves";
+    $("moves").textContent = hist.length;
+    $("par").textContent = "par " + par + (store.get("p3d-tb2-best-"+idx, 0) ? "  ·  best " + store.get("p3d-tb2-best-"+idx, 0) : "");
+    $("lvlNum").textContent = LEVELS[idx].num; $("lvlName").textContent = LEVELS[idx].name;
+    $("undo").disabled = !hist.length || watching;
+    const nav = $("tdots"); nav.textContent = "";
+    LEVELS.forEach((lv,i) => {
+      const b = document.createElement("button");
+      b.className = "dot" + (done.has(i) ? " done" : ""); b.type = "button";
+      b.setAttribute("aria-label", "Board " + lv.num + ", " + lv.name);
+      b.setAttribute("aria-current", i === idx ? "true" : "false");
+      b.onclick = () => { if (!busy && !watching) load(i); };
+      nav.appendChild(b);
+    });
+  }
+
+  // Roll the cube one tile with a pivot on its leading bottom edge.
+  async function animRoll(d, blocked, speed){
+    const [dx,dz] = DIRS[d];
+    const px = (s.x + dx/2)*U, pz = (s.z + dz/2)*U;
+    pivot.position.set(px, 0, pz); pivot.rotation.set(0,0,0); pivot.updateMatrixWorld();
+    pivot.attach(cube);
+    const ax = dx ? "z" : "x", sg = d === "E" ? -1 : d === "W" ? 1 : d === "S" ? 1 : -1;
+    const sp = speed || 1;
+    if (blocked){
+      await tween(130*sp, k => pivot.rotation[ax] = sg*0.24*k, ease.out);
+      await tween(320*sp, k => pivot.rotation[ax] = sg*0.24*(1-k)*Math.cos(k*7)*(1-k*0.2), ease.out);
+    } else {
+      await tween(250*sp, k => pivot.rotation[ax] = sg*Math.PI/2*k, k => k*k*0.75 + k*0.25);
+    }
+    root.attach(cube);
+  }
+  function settle(rec){
+    tween(220, k => { rec.grp.position.y = -0.022*Math.sin(Math.PI*k)*(1-k*0.5); }, ease.out);
+  }
+  async function go(d, speed){
+    const r = step(L, s, d);
+    if (!r){ await animRoll(d, true, speed); place(); return; }
+    await animRoll(d, false, speed);
+    hist.push({x:s.x, z:s.z, f:s.f, mask:s.mask, d});
+    const from = tiles.get(s.x+","+s.z); if (from) from.dot.visible = true;
+    s = {x:r.x, z:r.z, f:r.f, mask:r.mask};
+    const rec = tiles.get(s.x+","+s.z);
+    rec.dot.visible = false;
+    place(); settle(rec);
+    if (r.ev && r.ev.type === "paint"){
+      rec.ring.visible = true;
+      tween(560, k => { rec.ring.scale.setScalar(1 + k*0.9); rec.ring.material.opacity = 0.55*(1-k); }, ease.out).then(() => { rec.ring.visible = false; rec.ring.material.opacity = 0.55; });
+    }
+    if (r.ev && r.ev.type === "stamp"){
+      rec.fill.visible = true;
+      tween(420, k => rec.fill.scale.setScalar(0.3 + 0.7*k), ease.out);
+    }
+    hud();
+    if (s.mask === (1 << L.targets.length) - 1) win();
+  }
+  async function undo(){
+    if (busy || watching || !hist.length) return;
+    busy = true;
+    const prev = hist[hist.length-1];
+    await animRoll(OPP[prev.d], false);
+    hist.pop();
+    const rec = tiles.get(s.x+","+s.z);
+    for (const t of L.targets) if ((s.mask >> t.i & 1) && !(prev.mask >> t.i & 1)){ const tr = tiles.get(t.x+","+t.z); tr.fill.visible = false; tr.fill.scale.setScalar(0.001); }
+    s = {x:prev.x, z:prev.z, f:prev.f, mask:prev.mask};
+    const back = tiles.get(s.x+","+s.z); back.dot.visible = false;
+    if (hist.length === 0) for (const r of tiles.values()) r.dot.visible = false;
+    place(); settle(back); hud();
+    busy = false;
+  }
+  function win(){
+    won = true;
+    if (watching) return;
+    const n = hist.length;
+    done.add(idx); store.set("p3d-tb2-done", [...done]);
+    const b = store.get("p3d-tb2-best-"+idx, 0);
+    if (!b || n < b) store.set("p3d-tb2-best-"+idx, n);
+    hud();
+    const lastL = idx === LEVELS.length - 1;
+    $("veilTitle").textContent = n <= par ? "Clean." : "Stamped.";
+    $("veilText").textContent = n <= par ? n + " rolls, the fewest possible." : n + " rolls. It can be done in " + par + ".";
+    $("veilBtn").textContent = lastL ? "Start over" : "Next board";
+    $("veilBtn").onclick = () => load(lastL ? 0 : idx + 1);
+    $("veilAlt").hidden = false; $("veilAlt").textContent = "Watch the shortest";
+    $("veilAlt").onclick = watch;
+    setTimeout(() => $("veil").classList.add("show"), 450);
+  }
+  async function watch(){
+    $("veil").classList.remove("show");
+    if (busy) return;
+    watching = true; busy = true; reset(); hud();
+    await tween(500, () => {});
+    for (const d of sol){ await go(d, 1.5); await tween(140, () => {}); }
+    busy = false; watching = false;
+    const lastL = idx === LEVELS.length - 1;
+    $("veilTitle").textContent = par + " rolls.";
+    $("veilText").textContent = "That's the shortest route.";
+    $("veilBtn").textContent = lastL ? "Start over" : "Next board";
+    $("veilBtn").onclick = () => load(lastL ? 0 : idx + 1);
+    $("veilAlt").hidden = false; $("veilAlt").textContent = "Try again";
+    $("veilAlt").onclick = () => { $("veil").classList.remove("show"); reset(); };
+    setTimeout(() => $("veil").classList.add("show"), 450);
+  }
+  async function pump(d){
+    if (watching || won) return;
+    if (busy){ queued = d; return; }
+    busy = true;
+    let next = d;
+    while (next){ queued = null; await go(next); next = won ? null : queued; }
+    busy = false;
+  }
+  function dirFrom(dx, dy){
+    const o = new THREE.Vector3(s.x*U, U/2, s.z*U).add(root.position);
+    const s0 = o.clone().project(camera); let best = null;
+    for (const d of "NESW"){
+      const w = o.clone(); w.x += DIRS[d][0]*U; w.z += DIRS[d][1]*U;
+      const s1 = w.project(camera);
+      const sx = (s1.x - s0.x)*innerWidth/2, sy = -(s1.y - s0.y)*innerHeight/2, len = Math.hypot(sx, sy) || 1;
+      const dot = (dx*sx + dy*sy)/len;
+      if (!best || dot > best.dot) best = {d, dot};
+    }
+    return best.d;
+  }
+  function swipe(dx, dy){ if (!LEVELS[idx].hint) $("thint").style.opacity = "0"; pump(dirFrom(dx, dy)); }
+  function view(){ const span = Math.max(L.cols, L.rowsN)*U; return {half: span*0.66 + 0.2, y: 0.1}; }
+  function show(on){
+    root.visible = on;
+    if (on){ floor.position.y = -0.2; if (!L) load(idx); else { orbit.targetTheta = 0.55; orbit.targetPhi = 0.82; hud(); } }
+  }
+  $("undo").addEventListener("click", undo);
+  $("restart").addEventListener("click", () => { if (!busy && !watching) reset(); });
+  $("turnL").addEventListener("click", () => orbit.targetTheta -= Math.PI/2);
+  $("turnR").addEventListener("click", () => orbit.targetTheta += Math.PI/2);
+  return {show, swipe, view, undo};
+})();
+/* ================= Foresee mode =================
+   The cube holds still while arcs show the turns to come. Tap where the
+   marked square will land. Then watch it go, leaving a trail. */
+const FORESEE = (function(){
+  const SIZE = 1.7;
+  const MARK = ["#B8996A","#7F9A86"], MARK_NAME = ["brass","sage"];
+  const root = new THREE.Group(); root.visible = false; scene.add(root);
+  const cubies = new THREE.Group(); root.add(cubies);
+  const pivot = new THREE.Object3D(); cubies.add(pivot);
+  const fx = new THREE.Group(); root.add(fx);
+  const bodyMat = new THREE.MeshPhysicalMaterial({color:lin("#1F2226"), roughness:0.5, metalness:0.15, clearcoat:0.3, clearcoatRoughness:0.4});
+  const blankMat = new THREE.MeshPhysicalMaterial({color:lin("#E8E5E0"), roughness:0.55, clearcoat:0.35, clearcoatRoughness:0.35});
+  const markMats = MARK.map(hx => new THREE.MeshPhysicalMaterial({color:lin(hx), roughness:0.4, metalness:0.1, clearcoat:0.6, clearcoatRoughness:0.25}));
+  const trailMats = MARK.map(hx => new THREE.MeshBasicMaterial({color:lin(hx), transparent:true, opacity:0.9}));
+  const frameMats = MARK.map(hx => new THREE.MeshBasicMaterial({color:lin(hx), side:THREE.DoubleSide, polygonOffset:true, polygonOffsetFactor:-2}));
+  const missMat = new THREE.MeshBasicMaterial({color:lin("#8B9199"), side:THREE.DoubleSide, transparent:true, opacity:0.8, polygonOffset:true, polygonOffsetFactor:-2});
+  const arcMat = () => new THREE.MeshBasicMaterial({color:lin(accentHex), transparent:true, opacity:1, depthWrite:false});
+  const Y = new THREE.Vector3(0,1,0), Z = new THREE.Vector3(0,0,1), AXES = [new THREE.Vector3(1,0,0), Y, Z];
+  const vec = a => new THREE.Vector3(a[0], a[1], a[2]);
+
+  let core, n = 0, h, S, loc, cubieList = [], stickerMesh = [], geo = null;
+  let level = store.get("p3d-fs-level", 1), best = store.get("p3d-fs-best", 1), streak = 0;
+  let R = null, phase = "idle", arcs = [], loopT0 = 0, chipIdx = -1, autoNext = 0;
+
+  function spec(lv){
+    const n = lv <= 3 ? 2 : lv <= 11 ? 3 : 4;
+    const k = [0,1,2,2,2,3,3,3,4,3,4,4,2,3,3,4,4,5][Math.min(lv,17)] || 5;
+    const marks = (lv >= 9 && lv <= 11) || lv >= 15 ? 2 : 1;
+    return {n, k, marks, distract: lv >= 6, slices: lv >= 10};
+  }
+  function buildCube(size){
+    if (size !== n){
+      n = size; core = CubeCore(n); S = core.S; h = SIZE/n/2;
+      if (geo) Object.values(geo).forEach(x => x.dispose());
+      const s = 2*h;
+      geo = { body: new THREE.BoxGeometry(s*0.985, s*0.985, s*0.985),
+        sticker: new THREE.ShapeGeometry(roundedSquare(s*0.84, s*0.13)),
+        frame: (() => { const sh = roundedSquare(s*1.0, s*0.17); sh.holes.push(roundedSquare(s*0.76, s*0.1, true)); return new THREE.ShapeGeometry(sh); })() };
+    }
+    cubieList.forEach(c => cubies.remove(c.grp)); cubieList = []; stickerMesh = [];
+    core.pieces.forEach(pc => {
+      const grp = new THREE.Group();
+      grp.position.copy(vec(core.st[pc.ids[0]].p).multiplyScalar(h));
+      const b = new THREE.Mesh(geo.body, bodyMat); b.castShadow = true; b.receiveShadow = true; grp.add(b);
+      pc.ids.forEach(id => {
+        const m = new THREE.Mesh(geo.sticker, blankMat);
+        m.position.copy(vec(core.st[id].q).multiplyScalar(h + 0.002));
+        m.quaternion.setFromUnitVectors(Z, vec(core.st[id].q));
+        stickerMesh[id] = m; grp.add(m);
+      });
+      cubies.add(grp); cubieList.push({grp, pc});
+    });
+    loc = new Int16Array(S); for (let i = 0; i < S; i++) loc[i] = i;
+  }
+  const affects = (m, pos) => core.st[pos].p[core.moves[m].a] === core.moves[m].L;
+  function generate(){
+    const sp = spec(level);
+    buildCube(sp.n);
+    const cand = [];
+    for (let i = 0; i < S; i++){ const kind = core.pieces[core.pieceOf[i]].ids.length; if (sp.n === 3 && kind === 1) continue; cand.push(i); }
+    const allowed = [...Array(core.NM).keys()].filter(m => sp.slices || sp.n !== 3 || core.moves[m].L !== 0);
+    for (let tries = 0; tries < 500; tries++){
+      const marks = [];
+      while (marks.length < sp.marks){
+        const id = cand[Math.floor(Math.random()*cand.length)];
+        if (!marks.some(x => core.pieceOf[x] === core.pieceOf[id])) marks.push(id);
+      }
+      let pos = marks.slice(), moves = [], la = -1, ll = -1, hits = 0, misses = 0;
+      for (let i = 0; i < sp.k; i++){
+        let opts = allowed.filter(m => !(core.moves[m].a === la && core.moves[m].li === ll));
+        const hitting = opts.filter(m => pos.some(p => affects(m, p)));
+        if (!sp.distract || Math.random() < 0.7) opts = hitting.length ? hitting : opts;
+        const m = opts[Math.floor(Math.random()*opts.length)];
+        if (pos.some(p => affects(m, p))) hits++; else misses++;
+        pos = pos.map(p => core.moves[m].perm[p]);
+        moves.push(m); la = core.moves[m].a; ll = core.moves[m].li;
+      }
+      if (pos.some((p,j) => p === marks[j])) continue;
+      if (sp.distract && sp.k >= 3 && misses === 0) continue;
+      if (hits < Math.ceil(sp.k*0.6)) continue;
+      return {marks, moves, finals:pos, guesses:[], sp};
+    }
+    return null;
+  }
+
+  /* ---------- Camera ---------- */
+  // Direction the camera is heading toward (its orbit target), not where it is mid-glide.
+  function camDir(){ const t = orbit.targetTheta, ph = orbit.targetPhi; return new THREE.Vector3(Math.sin(ph)*Math.sin(t), Math.cos(ph), Math.sin(ph)*Math.cos(t)); }
+  // Swing the view so the given squares face the camera. Leaves it alone if they already do.
+  function aimAt(ids, force){
+    const cam = camDir();
+    if (!force && ids.every(p => vec(core.st[p].q).dot(cam) > 0.3)) return;
+    const q = new THREE.Vector3(); ids.forEach(p => q.add(vec(core.st[p].q)));
+    if (q.lengthSq() < 0.1) q.copy(vec(core.st[ids[0]].q));
+    q.normalize();
+    // Three-quarter view: mostly toward the face, tilted toward where the camera already is.
+    const side = cam.clone().addScaledVector(q, -cam.dot(q));
+    if (side.lengthSq() < 0.01) side.set(q.z, Math.abs(q.y) > 0.9 ? 0 : 0.6, -q.x).cross(q);
+    side.normalize();
+    const d = q.multiplyScalar(1).addScaledVector(side, 0.7).normalize();
+    const phi = Math.max(0.45, Math.min(2.7, Math.acos(Math.max(-1, Math.min(1, d.y)))));
+    let th = Math.atan2(d.x, d.z);
+    while (th - orbit.targetTheta > Math.PI) th -= 2*Math.PI;
+    while (th - orbit.targetTheta < -Math.PI) th += 2*Math.PI;
+    orbit.targetTheta = th; orbit.targetPhi = phi;
+  }
+
+  /* ---------- Arcs ---------- */
+  function basis(a){ return a === 0 ? [Y, Z] : a === 1 ? [Z, AXES[0]] : [AXES[0], Y]; }
+  function arcFor(mi, slot){
+    const m = core.moves[mi], [u, v] = basis(m.a);
+    const ang = (m.k === 3 ? -1 : m.k) * Math.PI/2 * 0.9;
+    const cam = camDir();
+    const phc = Math.atan2(cam.dot(v), cam.dot(u));
+    const Rr = SIZE*0.5*1.45 + 0.1 + slot*0.06;
+    const c0 = AXES[m.a].clone().multiplyScalar(m.L*h);
+    const pts = [];
+    for (let i = 0; i <= 48; i++){ const ph = phc - ang/2 + ang*i/48; pts.push(c0.clone().addScaledVector(u, Rr*Math.cos(ph)).addScaledVector(v, Rr*Math.sin(ph))); }
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const mat = arcMat();
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.012, 6, false), mat);
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 18), mat);
+    head.position.copy(pts[pts.length-1]);
+    head.quaternion.setFromUnitVectors(Y, curve.getTangent(1));
+    const grp = new THREE.Group(); grp.add(tube, head);
+    return {grp, tube, head, mat, count: tube.geometry.index.count};
+  }
+  function buildArcs(){
+    arcs.forEach(a => { fx.remove(a.grp); a.tube.geometry.dispose(); a.head.geometry.dispose(); }); arcs = [];
+    const seen = new Map();
+    R.moves.forEach(mi => {
+      const k = core.moves[mi].a + ":" + core.moves[mi].li, slot = seen.get(k) || 0; seen.set(k, slot + 1);
+      const a = arcFor(mi, slot); fx.add(a.grp); arcs.push(a);
+    });
+  }
+  // Loop: each arc draws in, earlier arcs stay faint, then a pause.
+  function loopArcs(now){
+    const per = 950, pause = 900, total = arcs.length*per + pause;
+    const t = (now - loopT0) % total;
+    const cur = Math.min(arcs.length - 1, Math.floor(t / per)), kk = Math.min(1, (t - cur*per)/620);
+    const inPause = t >= arcs.length*per;
+    arcs.forEach((a,i) => {
+      if (inPause){ a.mat.opacity = 0.9; a.tube.geometry.setDrawRange(0, a.count); a.head.visible = true; return; }
+      if (i < cur){ a.mat.opacity = 0.28; a.tube.geometry.setDrawRange(0, a.count); a.head.visible = true; }
+      else if (i === cur){ a.mat.opacity = 1; a.tube.geometry.setDrawRange(0, Math.floor(a.count*ease.out(kk)/6)*6); a.head.visible = kk > 0.85; }
+      else { a.tube.geometry.setDrawRange(0, 0); a.head.visible = false; }
+    });
+    const ci = inPause ? -1 : cur;
+    if (ci !== chipIdx){ chipIdx = ci; paintChips(ci, "loop"); }
+  }
+
+  /* ---------- Frames, trails ---------- */
+  function posWorld(i, off){ const st = core.st[i]; return vec(st.p).multiplyScalar(h).addScaledVector(vec(st.q), h + off); }
+  function frameAt(pos, mat){
+    const f = new THREE.Mesh(geo.frame, mat);
+    f.position.copy(posWorld(pos, 0.006)); f.quaternion.setFromUnitVectors(Z, vec(core.st[pos].q));
+    fx.add(f); return f;
+  }
+  function buildTrail(id, j){
+    const pts = [], marksAt = [0];
+    let pos = id, p = posWorld(pos, 0.035);
+    pts.push(p.clone());
+    R.moves.forEach(mi => {
+      const m = core.moves[mi];
+      if (affects(mi, pos)){
+        const ang = (m.k === 3 ? -1 : m.k) * Math.PI/2, steps = m.k === 2 ? 24 : 14;
+        for (let i = 1; i <= steps; i++) pts.push(p.clone().applyAxisAngle(AXES[m.a], ang*i/steps));
+        pos = m.perm[pos]; p = posWorld(pos, 0.035);
+        pts[pts.length-1].copy(p);
+      }
+      marksAt.push(pts.length - 1);
+    });
+    if (pts.length < 2) pts.push(p.clone().add(new THREE.Vector3(0,0.0001,0)));
+    const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.2);
+    const segs = (pts.length - 1)*3;
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, segs, 0.016, 8, false), trailMats[j]);
+    tube.geometry.setDrawRange(0, 0);
+    fx.add(tube);
+    const per = tube.geometry.index.count / segs;
+    return {tube, set: f => tube.geometry.setDrawRange(0, Math.floor(f*3)*per), marksAt};
+  }
+
+  /* ---------- Rounds ---------- */
+  function newRound(){
+    clearTimeout(autoNext);
+    fx.children.slice().forEach(c => { fx.remove(c); if (c.geometry && c.geometry !== geo?.frame) c.geometry.dispose(); });
+    arcs = [];
+    R = generate();
+    if (!R){ level = Math.max(1, level - 1); R = generate(); }
+    stickerMesh.forEach((m,i) => m.material = blankMat);
+    R.marks.forEach((id,j) => stickerMesh[id].material = markMats[j]);
+    phase = "ask"; loopT0 = performance.now(); chipIdx = -2;
+    aimAt(R.marks);
+    buildArcs(); renderChips(); hud();
+    root.scale.setScalar(0.94); tween(500, k => root.scale.setScalar(0.94 + 0.06*k), ease.out);
+  }
+  async function reveal(replay){
+    phase = "reveal"; hud();
+    arcs.forEach(a => { a.mat.opacity = 0.14; a.tube.geometry.setDrawRange(0, a.count); a.head.visible = true; });
+    const trails = R.marks.map((id,j) => buildTrail(id, j));
+    const slow = replay ? 1.3 : 1;
+    let cur = R.marks.slice();
+    await tween(350, () => {});
+    for (let i = 0; i < R.moves.length; i++){
+      const mi = R.moves[i], m = core.moves[mi];
+      paintChips(i, "reveal");
+      cur = cur.map(p => m.perm[p]);
+      aimAt(cur);
+      arcs[i].mat.opacity = 0.9;
+      const sel = cubieList.filter(c => core.st[loc[c.pc.ids[0]]].p[m.a] === m.L);
+      for (let q = 0; q < S; q++) loc[q] = m.perm[loc[q]];
+      pivot.rotation.set(0,0,0); pivot.updateMatrixWorld();
+      sel.forEach(c => pivot.attach(c.grp));
+      const ang = (m.k === 3 ? -1 : m.k) * Math.PI/2, ax = "xyz"[m.a];
+      const dur = (m.k === 2 ? 900 : 640)*slow;
+      await tween(dur, k => { pivot.rotation[ax] = ang*k; trails.forEach(t => t.set(t.marksAt[i] + (t.marksAt[i+1] - t.marksAt[i])*k)); });
+      pivot.updateMatrixWorld();
+      const mat4 = new THREE.Matrix4();
+      sel.forEach(c => {
+        cubies.attach(c.grp);
+        c.grp.position.copy(vec(core.st[loc[c.pc.ids[0]]].p).multiplyScalar(h));
+        const e = mat4.makeRotationFromQuaternion(c.grp.quaternion).elements;
+        for (let z = 0; z < 16; z++) e[z] = Math.round(e[z]);
+        c.grp.quaternion.setFromRotationMatrix(mat4);
+      });
+      arcs[i].mat.opacity = 0.14;
+      await tween(160*slow, () => {});
+    }
+    paintChips(-1, "reveal");
+    if (!replay) judge();
+    else {
+      fx.children.forEach(c => { if (c.geometry === geo.frame) c.visible = true; });
+      phase = "result"; hud();
+    }
+  }
+  function judge(){
+    const right = R.marks.every((id,j) => R.guesses[j] === R.finals[j]);
+    R.right = right;
+    R.marks.forEach((id,j) => {
+      if (R.guesses[j] !== R.finals[j]) frameAt(R.finals[j], frameMats[j]);
+    });
+    if (right){
+      streak++; level++; if (level > best){ best = level; store.set("p3d-fs-best", best); }
+      const mm = markMats; tween(700, k => mm.forEach(m => { const g = Math.sin(Math.PI*k)*0.35; m.emissive.setRGB(g,g,g); }));
+      autoNext = setTimeout(() => { if (phase === "result") newRound(); }, 2200);
+    } else { streak = 0; level = Math.max(1, level - 1); }
+    store.set("p3d-fs-level", level);
+    phase = "result"; hud();
+  }
+  async function replay(){
+    if (phase !== "result") return;
+    clearTimeout(autoNext);
+    phase = "rewind"; hud();
+    // Old trails go; outlines hide until the replay ends so they don't sit on the wrong squares.
+    fx.children.slice().forEach(c => {
+      if (c.geometry === geo.frame) c.visible = false;
+      else if (c.isMesh) { fx.remove(c); c.geometry.dispose(); }
+    });
+    arcs.forEach(a => { a.mat.opacity = 0.14; });
+    await tween(240, k => cubies.scale.setScalar(1 - 0.08*k), ease.io);
+    buildCube(n);
+    stickerMesh.forEach(m => m.material = blankMat);
+    R.marks.forEach((id,j) => stickerMesh[id].material = markMats[j]);
+    aimAt(R.marks);
+    await tween(320, k => cubies.scale.setScalar(0.92 + 0.08*k), ease.out);
+    // Show where it starts.
+    await tween(700, k => markMats.forEach(mt => { const g = Math.sin(Math.PI*k)*0.3; mt.emissive.setRGB(g,g,g); }));
+    await reveal(true);
+  }
+
+  /* ---------- HUD ---------- */
+  function renderChips(){
+    const el = $("fchips"); el.textContent = "";
+    R.moves.forEach((mi,i) => { const b = document.createElement("span"); b.className = "chip"; b.textContent = core.name(mi); el.appendChild(b); });
+  }
+  function paintChips(i){ [...$("fchips").children].forEach((c,j) => c.className = "chip" + (j === i ? " now" : j < i ? " past" : "")); }
+  function hud(){
+    if (mode !== "foresee") return;
+    $("lvlNum").textContent = level; $("lvlName").textContent = "Foresee";
+    $("scoreLabel").textContent = "Streak";
+    $("moves").textContent = streak;
+    $("par").textContent = "best level " + best;
+    const two = R && R.marks.length === 2;
+    let t = "";
+    if (phase === "ask"){
+      if (R.guesses.length === 0) t = two ? "<b>Watch the turns.</b> Tap where the brass square lands, then the sage one." : "<b>Watch the turns.</b> Tap where the brass square will land.";
+      else t = "<b>Now the sage square.</b>";
+    } else if (phase === "rewind") t = "From the start.";
+    else if (phase === "reveal") t = "Watch it go.";
+    else if (phase === "result"){
+      t = R.right ? "<b>Right.</b> The next one asks a little more."
+                  : "<b>It landed in the outlined square.</b> Your guess is in grey. Replay it, or try another.";
+    }
+    $("fstatus").innerHTML = t;
+    $("freplay").hidden = phase !== "result";
+    $("fnext").hidden = phase !== "result";
+  }
+  function pick(ndc){
+    const ray = new THREE.Raycaster(); ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObject(cubies, true)[0]; if (!hit) return null;
+    const v = [hit.point.x, hit.point.y, hit.point.z];
+    let a = 0; for (let i = 1; i < 3; i++) if (Math.abs(v[i]) > Math.abs(v[a])) a = i;
+    const q = [0,0,0]; q[a] = Math.sign(v[a]) || 1;
+    const c = [0,0,0]; c[a] = q[a]*core.M;
+    for (let o = 0; o < 3; o++) if (o !== a) c[o] = Math.max(-core.M, Math.min(core.M, Math.round((v[o]/h + core.M)/2)*2 - core.M));
+    const r = core.idx.get(core.K(c, q)); return r === undefined ? null : r;
+  }
+  function tap(ndc){
+    if (phase === "result"){ newRound(); return; }
+    if (phase !== "ask") return;
+    const pos = pick(ndc); if (pos === null) return;
+    const j = R.guesses.length;
+    R.guesses.push(pos);
+    const f = frameAt(pos, frameMats[j]);
+    f.userData.guess = j;
+    if (R.guesses.length === R.marks.length){
+      // guesses that turn out wrong go grey after the reveal
+      reveal(false).then(() => { fx.children.forEach(c => { if (c.userData.guess !== undefined && R.guesses[c.userData.guess] !== R.finals[c.userData.guess]) c.material = missMat; }); });
+    } else hud();
+  }
+  function tick(now){ if (phase === "ask" && arcs.length) loopArcs(now); }
+  function view(){ return {half: 1.75, y: 0}; }
+  function show(on){
+    root.visible = on;
+    if (on){ floor.position.y = -SIZE*0.5*1.45; orbit.targetTheta = 0.72; orbit.targetPhi = 1.02; if (!R) newRound(); else hud(); }
+    else clearTimeout(autoNext);
+  }
+  $("freplay").addEventListener("click", replay);
+  $("fnext").addEventListener("click", () => { if (phase === "result") newRound(); });
+  return {show, tap, tick, view};
+})();
+/* ================= Mode switch ================= */
+const MODES = {pieces:PIECES, tumble:TUMBLE, foresee:FORESEE};
+const FOOT = {pieces:"piecesFoot", tumble:"tumbleFoot", foresee:"foreFoot"};
+function setMode(m){
+  mode = m;
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  Object.entries(FOOT).forEach(([k,id]) => $(id).hidden = k !== m);
+  $("veil").classList.remove("show");
+  Object.entries(MODES).forEach(([k,M]) => { if (k !== m) M.show(false); });
+  MODES[m].show(true);
+  store.set("p3d-mode", m);
+  resize();
+}
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+/* ================= Input ================= */
+const ptrs = new Map();
+let pinch0 = 0, zoom0 = 1, down = null, centroid = null;
+const ndcOf = (x,y) => { const r = canvas.getBoundingClientRect(); return new THREE.Vector2(((x-r.left)/r.width)*2-1, -((y-r.top)/r.height)*2+1); };
+const clampPhi = v => Math.max(0.3, Math.min(mode === "foresee" ? 2.84 : mode === "tumble" ? 1.3 : 1.62, v));
+
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  orbit.touched = true;
+  if (ptrs.size === 1) down = {x:e.clientX, y:e.clientY, ox:e.clientX, oy:e.clientY, t:performance.now(), moved:0, used:false};
+  else if (ptrs.size === 2){
+    const [a,b] = [...ptrs.values()];
+    pinch0 = Math.hypot(a.x-b.x, a.y-b.y); zoom0 = orbit.zoom; centroid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+    down = null;
+  }
+});
+canvas.addEventListener("pointermove", e => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (ptrs.size === 1){
+    if (down) down.moved += Math.abs(dx) + Math.abs(dy);
+    if (mode === "tumble"){
+      // One-finger drag rolls. Keep dragging to roll again.
+      if (!down) return;
+      const ddx = e.clientX - down.ox, ddy = e.clientY - down.oy;
+      if (Math.hypot(ddx, ddy) > (down.used ? 46 : 22)){ down.used = true; TUMBLE.swipe(ddx, ddy); down.ox = e.clientX; down.oy = e.clientY; }
+      return;
+    }
+    orbit.targetTheta -= dx * 0.0085;
+    orbit.targetPhi = clampPhi(orbit.targetPhi - dy * 0.0085);
+  } else if (ptrs.size === 2){
+    const [a,b] = [...ptrs.values()];
+    const d = Math.hypot(a.x-b.x, a.y-b.y);
+    if (pinch0) orbit.zoom = Math.max(0.6, Math.min(1.5, zoom0 * pinch0 / d));
+    const c = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+    if (centroid){ orbit.targetTheta -= (c.x - centroid.x) * 0.0085; orbit.targetPhi = clampPhi(orbit.targetPhi - (c.y - centroid.y) * 0.0085); }
+    centroid = c;
+  }
+});
+function endPtr(e){
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (down && ptrs.size === 0 && !down.used && down.moved < 8 && performance.now() - down.t < 500){
+    const ndc = ndcOf(e.clientX, e.clientY);
+    if (mode === "pieces") PIECES.tap(ndc); else if (mode === "foresee") FORESEE.tap(ndc);
+  }
+  if (ptrs.size === 0){ down = null; centroid = null; }
+  if (ptrs.size === 1) centroid = null;
+}
+canvas.addEventListener("pointerup", endPtr);
+canvas.addEventListener("pointercancel", e => { ptrs.delete(e.pointerId); down = null; centroid = null; });
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+canvas.addEventListener("wheel", e => { e.preventDefault(); orbit.zoom = Math.max(0.6, Math.min(1.5, orbit.zoom * (1 + e.deltaY*0.001))); }, {passive:false});
+addEventListener("keydown", e => {
+  if (mode === "tumble"){
+    const v = {ArrowUp:[0,-1], KeyW:[0,-1], ArrowDown:[0,1], KeyS:[0,1], ArrowLeft:[-1,0], KeyA:[-1,0], ArrowRight:[1,0], KeyD:[1,0]}[e.code];
+    if (v){ e.preventDefault(); TUMBLE.swipe(v[0]*100, v[1]*100); return; }
+    if (e.code === "KeyQ") orbit.targetTheta -= Math.PI/2;
+    if (e.code === "KeyE") orbit.targetTheta += Math.PI/2;
+    if (e.code === "KeyZ" || e.code === "Backspace") TUMBLE.undo();
+    return;
+  }
+  const k = {ArrowLeft:[0.25,0], ArrowRight:[-0.25,0], ArrowUp:[0,0.15], ArrowDown:[0,-0.15]}[e.key];
+  if (!k) return;
+  orbit.touched = true; orbit.targetTheta += k[0]; orbit.targetPhi = clampPhi(orbit.targetPhi + k[1]);
+});
+
+/* ================= Loop ================= */
+function resize(){
+  const w = innerWidth, hh = innerHeight;
+  renderer.setSize(w, hh, false);
+  camera.aspect = w / hh; camera.updateProjectionMatrix();
+  const tall = camera.aspect < 0.8;
+  let half = tall ? 1.55 : 1.85, ty = -0.05;
+  if (mode !== "pieces"){ const v = MODES[mode].view(); half = v.half; ty = (tall ? -0.3 : -0.1) + v.y; }
+  const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+  orbit.r = Math.max(half / tv, half / (tv * camera.aspect)) * 1.05;
+  target.set(0, ty, 0);
+}
+addEventListener("resize", resize);
+
+function frame(now){
+  for (let i = tweens.length - 1; i >= 0; i--){
+    const t = tweens[i], k = Math.min(1, (now - t.t0) / t.dur);
+    t.fn(t.e(k));
+    if (k >= 1){ tweens.splice(i,1); t.res(); }
+  }
+  if (!orbit.touched && !reduce && mode === "pieces") orbit.targetTheta += 0.0016;
+  orbit.theta += (orbit.targetTheta - orbit.theta) * 0.12;
+  orbit.phi += (orbit.targetPhi - orbit.phi) * 0.12;
+  const r = orbit.r * orbit.zoom;
+  camera.position.set(
+    target.x + r * Math.sin(orbit.phi) * Math.sin(orbit.theta),
+    target.y + r * Math.cos(orbit.phi),
+    target.z + r * Math.sin(orbit.phi) * Math.cos(orbit.theta));
+  camera.lookAt(target);
+  PIECES.tick(); FORESEE.tick(now);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+syncTheme();
+PIECES.buildLevel(0);
+const saved = store.get("p3d-mode", "pieces");
+setMode(MODES[saved] ? saved : "pieces");
+requestAnimationFrame(frame);
+})();
+</script>
