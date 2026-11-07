@@ -1,4 +1,4 @@
-<meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Sound Jam Band</title>
+<meta name="robots" content="noindex,nofollow"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Sound Jam Band</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: one narrow column of rack-style panels (~380px), transport + "now playing" on top, mixer at the bottom.
@@ -2166,7 +2166,7 @@ SOUND.tests = (() => {
   function load(i) {
     if (i >= VERSIONS.length) { ver.textContent = 'Could not load Tone.js from cdnjs. Check your connection and reload.'; return; }
     const s = document.createElement('script');
-    s.src = `https://cdnjs.cloudflare.com/ajax/libs/tone/${VERSIONS[i]}/Tone.js`;
+    s.src = `vendor/tone/${VERSIONS[i]}/Tone.js`;
     s.onload = () => window.Tone ? SOUND.ui.ready(VERSIONS[i]) : load(i + 1);
     s.onerror = () => load(i + 1);
     document.head.appendChild(s);
