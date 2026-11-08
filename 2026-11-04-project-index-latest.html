@@ -114,6 +114,8 @@ textarea{min-height:64px;resize:vertical}
 table.plain{border-collapse:collapse;font-size:13.5px;width:100%}
 table.plain td,table.plain th{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left}
 .wrapx{overflow-x:auto}
+.card.setup .stripe{background:var(--accent)}
+.hint{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -135,7 +137,7 @@ const TABS = [["now", "Now"], ["queue", "Queue"], ["lost", "Lost work"], ["healt
   ["toolbox", "Toolbox"], ["cleanup", "Cleanup"], ["portfolio", "Portfolio"], ["reports", "Reports"], ["guide", "Guide"]];
 const TODAY = (D.graded || "").slice(0, 10);
 const state = {tab: "now", q: "", cat: "all", sev: "all", scope: "queue", sort: "rank", report: null, hq: "", hsort: "score",
-  dec: {}, uat: {}, db: null, sample: null, canWrite: false, answers: {}};
+  dec: {}, uat: {}, setup: {}, db: null, sample: null, canWrite: false, answers: {}};
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -234,6 +236,39 @@ function twentyPrompt() {
   return `You help a solo developer pick work. They have 20 minutes. Their priority: severity first, then ${(S.category_order || []).join(" > ")}; overdue first. Queue:\n${q}\n\nPick 1-2 items that fit in 20 minutes with the most risk reduced. Say why in two sentences and give the exact phrase to tell Claude (e.g. "approve no-ci"). Plain text, under 90 words.`;
 }
 
+/* ---------- needs setup ---------- */
+// Repos the nightly refresh found that index.yml hasn't sorted (D.needs_setup, built by index.needs_setup).
+// Copy the line, ask Claude to suggest values, or save it for Claude's next "sync my command center" (setup/<repo>).
+const setupItems = () => D.needs_setup || [];
+const setupId = repo => repo.replace(/[^A-Za-z0-9_\-.]+/g, "_");
+function setupLine(repo) { const el = $(`[data-setup-line="${CSS.escape(setupId(repo))}"]`); const it = setupItems().find(x => x.repo === repo); return el ? el.value : it ? it.line : ""; }
+function setupPrompt(it) {
+  const hs = D.setup_hints || {};
+  return `You help a solo developer file a new GitHub repo in their project index. Repo: ${it.repo}. Started: ${it.started || "unknown"}. Last commit: ${it.last || "none"}.\nMissing: ${it.missing.join(", ")}.\nTheme must be one of: ${(hs.themes || []).join(", ")}.\nPrefer 2-4 tags from: ${(hs.tags || []).join(", ")} (a new tag only if none fit).\nwhat = one plain line on what it is. next = the next concrete step, or leave it blank. active = true only if it looks like current work.\nReply with exactly one line in this form and nothing else:\n${it.line}`;
+}
+async function saveSetup(repo) {
+  const line = setupLine(repo);
+  if (D.demo) { toast("Demo: saved in this tab only"); return; }
+  if (!state.db || !state.canWrite) { toast("Read-only here. Copy the line and send it to Claude."); return; }
+  try { await state.db.doc("setup/" + setupId(repo)).set({repo, line, at: new Date().toISOString(), synced: false}); toast("Saved · Claude applies it next sync"); }
+  catch (e) { toast("Couldn't save: " + (e && e.code || "error")); }
+}
+function setupSection() {
+  const items = setupItems();
+  if (!items.length) return "";
+  const hs = D.setup_hints || {}, dis = D.demo || (state.db && state.canWrite) ? "" : " disabled";
+  return `<h2>Needs setup · ${items.length}</h2><p class="sub">The nightly refresh found these, but neither index.yml nor the repo's project.yml has sorted them. Fill in the blanks and send the line to Claude, or commit a project.yml to the repo.</p>` + items.map(it => {
+    const id = setupId(it.repo), key = "setup-" + id;
+    return `<article class="card setup"><div class="top"><div class="stripe"></div><div class="body">
+      <div class="row"><button class="btn ghost" data-report="${esc(it.repo)}">${esc(it.repo)}</button><span class="pill">${!it.listed ? "not in index.yml" : it.missing.includes("theme") ? "unsorted" : "check project.yml"}</span></div>
+      <div class="sub">Missing: ${esc(it.missing.join(", ") || "nothing")}${it.last ? " · last commit: " + esc(it.last) : ""}</div>${it.note ? `
+      <div class="sub">${esc(it.note)}</div>` : ""}
+      <textarea data-setup-line="${esc(id)}" aria-label="Setup line for ${esc(it.repo)}">${esc(state.setup[id] ?? it.line)}</textarea>
+      <div class="btns"><button class="btn" data-setup-copy="${esc(it.repo)}">Copy line</button><button class="btn" data-setup-ask="${esc(it.repo)}">Suggest values</button><button class="btn primary" data-setup-send="${esc(it.repo)}"${dis}>Save for Claude</button></div>
+      <div class="answer" id="ans-${esc(key)}" hidden></div></div></div></article>`;
+  }).join("") + `<p class="hint">${hs.themes && hs.themes.length ? "Themes: " + esc(hs.themes.join(" · ")) : ""}${hs.tags && hs.tags.length ? " — Tags: " + esc(hs.tags.join(" · ")) : ""}</p>`;
+}
+
 /* ---------- pieces ---------- */
 function decisionButtons(fs, scope) {
   const dis = D.demo || (state.db && state.canWrite) ? "" : " disabled";
@@ -269,7 +304,7 @@ V.now = () => {
   const m = D.metrics[D.metrics.length - 1] || {}, q = queue(), gs = groups(q);
   const rv = review(), pd = pending();
   const overdue = q.filter(f => f.overdue).length;
-  let h = `<h2>Today</h2><div class="tiles">${tile("Queue", "queue", q.length)}${tile("Critical", "critical", m.critical ?? 0, "down", +m.critical > 0)}${tile("High", "high", m.high ?? 0)}${tile("Overdue", "overdue", overdue, "down", overdue > 0)}${tile("Resolved 7d", "resolved_7d", m.resolved_7d ?? 0, "up")}${tile("Avg score", "avg_score", m.avg_score ?? "—", "up")}</div>`;
+  let h = setupSection() + `<h2>Today</h2><div class="tiles">${tile("Queue", "queue", q.length)}${tile("Critical", "critical", m.critical ?? 0, "down", +m.critical > 0)}${tile("High", "high", m.high ?? 0)}${tile("Overdue", "overdue", overdue, "down", overdue > 0)}${tile("Resolved 7d", "resolved_7d", m.resolved_7d ?? 0, "up")}${tile("Avg score", "avg_score", m.avg_score ?? "—", "up")}</div>`;
   if (rv.length || pd.length) {
     h += `<h2>Waiting on you</h2>`;
     h += rv.map(f => `<div class="area"><span class="k">${esc(f.repo)}</span><span class="v">${f.pr ? `<a href="${esc(f.pr)}">Review PR #${esc(f.pr.split("/").pop())}</a>` : "Approved, PR not opened yet"} · ${esc(VERB[f.check] || f.title)}</span></div>`).join("");
@@ -441,7 +476,7 @@ function findGroup(scope) {
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-tab],[data-goto],[data-report],[data-back],[data-act],[data-copy],[data-ask],[data-uat],[data-day],[data-tag],[data-undo]");
+  const t = e.target.closest("[data-tab],[data-goto],[data-report],[data-back],[data-act],[data-copy],[data-ask],[data-uat],[data-day],[data-tag],[data-undo],[data-setup-copy],[data-setup-ask],[data-setup-send]");
   if (!t) return;
   if (t.dataset.tab) return go(t.dataset.tab, {report: null});
   if (t.dataset.goto) return go(t.dataset.goto, {report: null});
@@ -452,6 +487,9 @@ document.addEventListener("click", e => {
   if (t.dataset.act) return decide(findGroup(t.dataset.scope), t.dataset.act);
   if (t.dataset.undo) return undo(t.dataset.undo);
   if (t.dataset.uat) return saveUat(t.dataset.name, t.dataset.uat);
+  if (t.dataset.setupCopy) { try { navigator.clipboard.writeText(setupLine(t.dataset.setupCopy)).then(() => toast("Line copied"), () => toast("Copy isn't allowed here")); } catch (_) { toast("Copy isn't allowed here"); } return; }
+  if (t.dataset.setupSend) return saveSetup(t.dataset.setupSend);
+  if (t.dataset.setupAsk) { const it = setupItems().find(x => x.repo === t.dataset.setupAsk); return it && ask("setup-" + setupId(it.repo), setupPrompt(it)); }
   if (t.dataset.copy) { const f = D.findings.find(x => x.code === t.dataset.copy); try { navigator.clipboard.writeText(f.prompt).then(() => toast("Prompt copied"), () => toast("Copy isn't allowed here")); } catch (_) { toast("Copy isn't allowed here"); } return; }
   if (t.dataset.ask) {
     if (t.dataset.ask === "twenty") return ask("twenty", twentyPrompt());
@@ -463,6 +501,7 @@ document.addEventListener("click", e => {
 document.addEventListener("input", e => {
   if (e.target.id === "q") { state.q = e.target.value; queueList(); }
   if (e.target.id === "hq") { state.hq = e.target.value; healthList(); }
+  if (e.target.dataset && e.target.dataset.setupLine) state.setup[e.target.dataset.setupLine] = e.target.value;   // keep edits across re-renders
 });
 document.addEventListener("change", e => {
   const id = e.target.id;
