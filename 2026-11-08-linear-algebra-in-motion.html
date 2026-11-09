@@ -1,0 +1,1273 @@
+<!doctype html>
+<html lang="en"><head><meta name="robots" content="noindex,nofollow"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>2026-11-08 - Linear Algebra in Motion</title>
+<meta name="sprint-public" content="yes">
+</head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="vendor/fonts/fonts-linear-algebra.css">
+<style>
+/* Layout: mobile-first one-screen instrument. Demo tabs, level chips, one plane, goal tray, transport. */
+:root{
+  --bg:#eef0f6; --panel:#fafbfe; --fg:#191c2a; --muted:#7a7f96; --line:#dcdfeb;
+  --grid0:#e7eaf3; --grid:#bcc5e3; --axis:#8a93b8;
+  --i:#0a9a87; --j:#de4b36; --v:#c98600; --w:#3a68e4; --e:#8438f5; --ok:#178a4c;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1017; --panel:#141722; --fg:#e7e9f3; --muted:#878da8; --line:#252a3b;
+  --grid0:#1c2030; --grid:#36406a; --axis:#6a74a2;
+  --i:#2fd2b9; --j:#ff7861; --v:#ffc23b; --w:#719cff; --e:#b38bff; --ok:#4fd389; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1017; --panel:#141722; --fg:#e7e9f3; --muted:#878da8; --line:#252a3b;
+  --grid0:#1c2030; --grid:#36406a; --axis:#6a74a2;
+  --i:#2fd2b9; --j:#ff7861; --v:#ffc23b; --w:#719cff; --e:#b38bff; --ok:#4fd389; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-display)}
+.app{height:100%;box-sizing:border-box;max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:8px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex:none}
+h1{margin:0;font-size:clamp(16px,2.2vw,22px);font-weight:700;letter-spacing:-.01em}
+.count{font:500 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px}
+[hidden]{display:none!important}
+.tab{border:0;background:transparent;color:var(--muted);font:600 clamp(11px,3.1vw,13px) var(--f-display);padding:7px 0;overflow:hidden;border-radius:9px;cursor:pointer;min-width:0;
+  display:flex;flex-direction:column;align-items:center;gap:1px}
+.tab small{font:500 10px var(--f-mono);opacity:.75}
+.tab[aria-current="true"]{background:var(--fg);color:var(--bg)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none;padding:1px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font:500 12.5px var(--f-mono);padding:6px 10px;border-radius:999px;border:1px solid var(--line);
+  background:transparent;color:var(--muted);cursor:pointer;display:flex;gap:6px;align-items:center}
+.chip i{width:6px;height:6px;border-radius:50%;background:var(--line);font-style:normal}
+.chip.done i{background:var(--ok)}
+.chip[aria-current="true"]{border-color:var(--fg);color:var(--fg);font-weight:700}
+.row{display:flex;align-items:center;gap:10px;flex:none;min-width:0}
+.say{flex:1;min-width:0;margin:0;font-size:15px;font-weight:600;line-height:1.3;text-wrap:balance}
+.hdr{display:flex;align-items:center;gap:10px}
+header{align-items:center}
+@media (max-width:560px){h1{display:none}header{justify-content:space-between}.hdr{flex:1;justify-content:space-between}}
+.seg{display:flex;flex:none;border:1px solid var(--line);border-radius:999px;padding:2px;background:var(--panel)}
+.seg button{border:0;background:transparent;color:var(--muted);font:600 12px var(--f-mono);padding:5px 9px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.seg button:disabled{opacity:.3;cursor:not-allowed}
+.seg button.real:not(:disabled):not([aria-pressed="true"]){color:var(--e);box-shadow:inset 0 0 0 1.5px var(--e)}
+.seg button.real[aria-pressed="true"]{background:var(--e);color:var(--panel)}
+.worlds{align-self:flex-start;flex:none}
+.worlds button{font-size:12.5px;padding:6px 12px}
+.worlds button[aria-pressed="true"]{background:var(--e);color:var(--panel)}
+.stage{flex:1;min-height:0;position:relative;border-radius:14px;overflow:hidden;background:var(--panel);border:1px solid var(--line)}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+canvas.swap{animation:fade .35s ease}
+@keyframes fade{from{opacity:.15}to{opacity:1}}
+.tray{display:flex;flex-direction:column;gap:6px;flex:none}
+.goal{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:1px dashed var(--axis);background:transparent;color:var(--fg);
+  font:500 14px var(--f-mono);padding:8px 12px;border-radius:10px;cursor:pointer}
+.goal .ic{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--e);display:grid;place-items:center;font-size:11px;color:var(--bg)}
+.goal .go{margin-left:auto;font-weight:700;color:var(--e)}
+.goal.ok{border-style:solid;border-color:var(--ok)}
+.goal.ok .ic{background:var(--ok);border-color:var(--ok)}
+.sl{display:flex;align-items:center;gap:10px;font:700 14px var(--f-mono)}
+.sl label{min-width:22px}
+.sl input{flex:1;min-width:0}
+.sl output{width:52px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}
+.controls{display:flex;align-items:center;gap:8px;flex:none}
+.btn{flex:none;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--fg);
+  display:grid;place-items:center;cursor:pointer;padding:0}
+.btn svg{width:18px;height:18px;fill:currentColor}
+#play{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+#next.pulse{animation:pulse 1.2s ease infinite;border-color:var(--ok);color:var(--ok)}
+@keyframes pulse{50%{transform:scale(1.1)}}
+#scrub{flex:1;min-width:0;accent-color:var(--v)}
+.spacer{flex:1}
+button:focus-visible,input:focus-visible{outline:2px solid var(--w);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){canvas.swap,#next.pulse{animation:none}}
+</style>
+
+<div class="app">
+  <header><h1>Linear Algebra in Motion</h1><span class="hdr"><div class="seg" id="themes" role="group" aria-label="Theme">
+      <button data-th="math" aria-pressed="true">Math</button><button data-th="color" aria-pressed="false">Color</button><button data-th="data" aria-pressed="false">Data</button><button data-th="real" class="real" aria-pressed="false">Story</button>
+    </div><span class="count" id="count"></span></span></header>
+  <nav class="tabs" id="tabs" aria-label="Demos"></nav>
+  <nav class="chips" id="chips" aria-label="Levels"></nav>
+  <div class="row"><p class="say" id="say"></p>
+</div>
+  <div class="seg worlds" id="worlds" role="group" aria-label="Real-life scene" hidden></div>
+  <div class="stage" id="stage"><canvas id="c" aria-label="Animation"></canvas></div>
+  <div class="tray"><button class="goal" id="goal"></button><div id="sliders" class="tray"></div></div>
+  <div class="controls">
+    <button class="btn" id="prev" aria-label="Previous level"><svg viewBox="0 0 24 24"><path d="M15.4 5.4 9 12l6.4 6.6-1.4 1.4L6.2 12 14 4z"/></svg></button>
+    <div class="seg" role="group" aria-label="Mode"><button id="mWatch" aria-pressed="true">Watch</button><button id="mTry" aria-pressed="false">Try</button></div>
+    <button class="btn" id="play" aria-label="Pause"><svg viewBox="0 0 24 24" id="playIcon"></svg></button>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Timeline">
+    <span class="spacer" id="spacer" hidden></span>
+    <button class="btn" id="reset" aria-label="Reset" hidden><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+    <button class="btn" id="next" aria-label="Next level"><svg viewBox="0 0 24 24"><path d="M8.6 5.4 15 12l-6.4 6.6 1.4 1.4 7.8-8-7.8-8z"/></svg></button>
+  </div>
+</div>
+
+<script>
+(() => {
+const cv = document.getElementById('c'), ctx = cv.getContext('2d'), stage = document.getElementById('stage');
+let CW = 300, CH = 300, MB = {x:0, y:0}, W = 300, H = 300, DPR = 1, S = 40, OX = 0, OY = 0, C = {}, DARK = false, TH = 'real';
+const KEYS = ['bg','panel','fg','muted','line','grid0','grid','axis','i','j','v','w','e','ok'];
+function readColors(){ const cs = getComputedStyle(document.documentElement); KEYS.forEach(k => C[k] = cs.getPropertyValue('--'+k).trim()); C.pos = C.i; C.neg = C.j;
+  const m = C.bg.match(/[0-9a-f]{2}/gi); DARK = m ? parseInt(m[0],16) < 90 : false; planeKey = ''; }
+let planeKey = '';
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme','class','style']});
+function resize(){ const r = stage.getBoundingClientRect(); DPR = window.devicePixelRatio || 1; CW = W = Math.max(1, r.width); CH = H = Math.max(1, r.height); cv.width = Math.round(CW*DPR); cv.height = Math.round(CH*DPR); planeKey = ''; }
+new ResizeObserver(resize).observe(stage); resize();
+
+// ---------- math ----------
+const I = [1,0,0,1];
+const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
+const lerp = (a,b,t) => a + (b-a)*t;
+const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+const seg = (t,a,b) => ease(clamp((t-a)/(b-a), 0, 1));
+const lerpA = (A,B,t) => A.map((a,k) => Array.isArray(a) ? lerpA(a, B[k], t) : lerp(a, B[k], t));
+const mul = (M,v) => [M[0]*v[0] + M[1]*v[1], M[2]*v[0] + M[3]*v[1]];
+const mm = (A,B) => [A[0]*B[0]+A[1]*B[2], A[0]*B[1]+A[1]*B[3], A[2]*B[0]+A[3]*B[2], A[2]*B[1]+A[3]*B[3]];
+const det = M => M[0]*M[3] - M[1]*M[2];
+const inv = M => { const d = det(M); return [M[3]/d, -M[1]/d, -M[2]/d, M[0]/d]; };
+const rot = a => [Math.cos(a), -Math.sin(a), Math.sin(a), Math.cos(a)];
+const add = (a,b) => [a[0]+b[0], a[1]+b[1]];
+const sub = (a,b) => [a[0]-b[0], a[1]-b[1]];
+const sc = (a,k) => [a[0]*k, a[1]*k];
+const len = a => Math.hypot(a[0], a[1]);
+const dot = (a,b) => a[0]*b[0] + a[1]*b[1];
+const cross = (a,b) => a[0]*b[1] - a[1]*b[0];
+const unit = a => { const l = len(a) || 1; return [a[0]/l, a[1]/l]; };
+const cols = M => [[M[0], M[2]], [M[1], M[3]]];
+const fromCols = (a,b) => [a[0], b[0], a[1], b[1]];
+const near = (a,b,tol = .06) => Math.abs(a[0]-b[0]) < tol && Math.abs(a[1]-b[1]) < tol;
+const nearM = (A,B,tol = .06) => A.every((x,k) => Math.abs(x - B[k]) < tol);
+function keys(t, ks){
+  if (t <= ks[0][0]) return ks[0][1];
+  for (let k = 0; k < ks.length-1; k++){ const [t0,a] = ks[k], [t1,b] = ks[k+1];
+    if (t <= t1){ const u = seg(t,t0,t1); return Array.isArray(a) ? lerpA(a,b,u) : lerp(a,b,u); } }
+  return ks[ks.length-1][1];
+}
+function fmt(n, d = 1){ const p = Math.pow(10,d); let r = Math.round(n*p)/p; if (Object.is(r,-0) || Math.abs(r) < 1e-9) r = 0; return String(r).replace('-', '−'); }
+function eig2(A){ const [a,b,c,d] = A, tr = a+d, de = a*d-b*c, disc = tr*tr/4 - de;
+  if (disc >= -1e-9){ const r = Math.sqrt(Math.max(0,disc)), ls = [tr/2 + r, tr/2 - r];
+    const vs = ls.map((l,k) => Math.abs(b) > 1e-6 ? [b, l-a] : Math.abs(c) > 1e-6 ? [l-d, c] : ((k === 0) === (a >= d) ? [1,0] : [0,1]));
+    return {real:true, ls, vs, rho:Math.max(Math.abs(ls[0]), Math.abs(ls[1]))}; }
+  return {real:false, re:tr/2, im:Math.sqrt(-disc), rho:Math.sqrt(de)}; }
+function svd2(A){ const [a,b,c,d] = A, p = a*a+c*c, q = a*b+c*d, r = b*b+d*d, th = .5*Math.atan2(2*q, p-r);
+  const v1 = [Math.cos(th), Math.sin(th)], v2 = [-Math.sin(th), Math.cos(th)], s1 = len(mul(A,v1)), s2 = len(mul(A,v2));
+  const u1 = s1 > 1e-9 ? sc(mul(A,v1), 1/s1) : [1,0], u2 = s2 > 1e-9 ? sc(mul(A,v2), 1/s2) : [-u1[1], u1[0]];
+  return {s1, s2, v1, v2, u1, u2, th}; }
+
+// ---------- colour (OKLab opponent plane: x = green→red, y = blue→yellow) ----------
+function rgbOf(x, y, L){ L = L ?? (DARK ? .64 : .78); const a = .05*x, b = .05*y;
+  const l_ = L + .3963377774*a + .2158037573*b, m_ = L - .1055613458*a - .0638541728*b, s_ = L - .0894841775*a - 1.291485548*b;
+  const l = l_*l_*l_, m = m_*m_*m_, s = s_*s_*s_;
+  const lin = [4.0767416621*l - 3.3077115913*m + .2309699292*s, -1.2684380046*l + 2.6097574011*m - .3413193965*s, -.0041960863*l - .7034186147*m + 1.707614701*s];
+  return lin.map(u => { u = clamp(u, 0, 1); return Math.round(255*(u <= .0031308 ? 12.92*u : 1.055*Math.pow(u, 1/2.4) - .055)); }); }
+const colorOf = (v, L) => { const c = rgbOf(v[0], v[1], L); return `rgb(${c[0]},${c[1]},${c[2]})`; };
+const planeCv = document.createElement('canvas');
+function drawPlane(){
+  const key = [W,H,S,OX,OY,DARK].join(':');
+  if (key !== planeKey){ planeKey = key; const st = 3, w = Math.ceil(W/st), h = Math.ceil(H/st); planeCv.width = w; planeCv.height = h;
+    const pc = planeCv.getContext('2d'), img = pc.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){ const c = rgbOf((x*st - OX)/S, (OY - y*st)/S), o = (y*w + x)*4; img.data[o] = c[0]; img.data[o+1] = c[1]; img.data[o+2] = c[2]; img.data[o+3] = 255; }
+    pc.putImageData(img, 0, 0); }
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.globalAlpha = .9; ctx.drawImage(planeCv, 0, 0, W, H); ctx.restore();
+}
+// procedural photo: per-pixel lightness + opponent colour
+const PW = 64, PH = 40, PHOTO = [];
+for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++){
+  const u = x/PW, v = y/PH; let L, a, b;
+  if (v < .55){ L = .62 + .3*v; a = .3; b = lerp(-3.2, 1.6, v/.55); }
+  else { const hill = .55 + .12*Math.sin(u*7) + .06*Math.sin(u*17); if (v > hill){ L = .5 + .25*(1-v); a = -2.6; b = 1.2; } else { L = .78; a = .8; b = 1.4; } }
+  const d = Math.hypot(u - .72, v - .28); if (d < .09){ L = .86; a = 2.2; b = 2.8; }
+  PHOTO.push([L, a, b]);
+}
+const phCv = document.createElement('canvas'); phCv.width = PW; phCv.height = PH; const phCtx = phCv.getContext('2d'), phImg = phCtx.createImageData(PW, PH);
+function photo(A){
+  const w = Math.min(110, W*.26), h = w*PH/PW, x0 = W - w - 12, pad = 6;
+  [[I, x0, H - 2*h - 12 - pad], [A, x0, H - h - 12]].forEach(([M, x, y]) => {
+    PHOTO.forEach((p, k) => { const q = mul(M, [p[1], p[2]]), c = rgbOf(q[0], q[1], p[0]); phImg.data.set([c[0], c[1], c[2], 255], k*4); });
+    phCtx.putImageData(phImg, 0, 0); ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(phCv, x, y, w, h);
+    ctx.strokeStyle = C.panel; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h); ctx.restore(); });
+  ctx.save(); ctx.font = font(11, 700); ctx.fillStyle = C.fg; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText('M ↓', x0 - 6, H - h - 12); ctx.restore();
+}
+
+// ---------- data (seeded, centred) ----------
+let seed = 11; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+const gauss = () => { let u = 0; while (!u) u = rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd()); };
+const DATA = []; for (let k = 0; k < 70; k++){ const x = gauss()*1.25; DATA.push([x, .75*x + gauss()*.55]); }
+{ const mx = DATA.reduce((s,p) => s + p[0], 0)/DATA.length, my = DATA.reduce((s,p) => s + p[1], 0)/DATA.length; DATA.forEach(p => { p[0] -= mx; p[1] -= my; }); }
+const COV = (() => { let a = 0, b = 0, c = 0; DATA.forEach(([x,y]) => { a += x*x; b += x*y; c += y*y; }); const n = DATA.length; return [a/n, b/n, c/n]; })();
+const pcaPct = ang => { const c = Math.cos(ang), s = Math.sin(ang); return 100*(COV[0]*c*c + 2*COV[1]*c*s + COV[2]*s*s)/(COV[0] + COV[2]); };
+const PCA_BEST = .5*Math.atan2(2*COV[1], COV[0] - COV[2]), PCA_MAX = pcaPct(PCA_BEST);
+const FIT = [[-3,-2.2],[-2.2,-1.1],[-1.4,-1.5],[-.6,.2],[.2,-.3],[1,1.2],[1.7,.8],[2.5,2.3],[3.2,1.9]];
+const FIT_BEST = (() => { const n = FIT.length, mx = FIT.reduce((s,p) => s + p[0], 0)/n, my = FIT.reduce((s,p) => s + p[1], 0)/n;
+  let sxy = 0, sxx = 0; FIT.forEach(([x,y]) => { sxy += (x-mx)*(y-my); sxx += (x-mx)*(x-mx); }); const m = sxy/sxx; return {m, c: my - m*mx}; })();
+const fitErr = (m, c) => FIT.reduce((s,[x,y]) => s + Math.pow(y - (m*x + c), 2), 0);
+const FIT_EMIN = fitErr(FIT_BEST.m, FIT_BEST.c), FX = 3.5;
+
+// ---------- drawing ----------
+const FS = () => W < 520 ? 14 : 17;
+const font = (fs, w = 500) => `${w} ${fs}px "JetBrains Mono", ui-monospace, Menlo, monospace`;
+const P = (x,y) => [OX + x*S, OY - y*S];
+const ext = () => Math.ceil((Math.max(W,H)/S)*0.75 + 3);
+function lines(M, color, lw, N, alpha = 1, skipAxes = false, dash){
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = lw; if (dash) ctx.setLineDash(dash); ctx.beginPath();
+  for (let k = -N; k <= N; k++){ if (skipAxes && k === 0) continue;
+    ctx.moveTo(...P(...mul(M,[k,-N]))); ctx.lineTo(...P(...mul(M,[k,N])));
+    ctx.moveTo(...P(...mul(M,[-N,k]))); ctx.lineTo(...P(...mul(M,[N,k]))); }
+  ctx.stroke(); ctx.restore();
+}
+function axesOf(M, alpha = 1, color){
+  const N = ext()*2; ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color || C.axis; ctx.lineWidth = 1.6; ctx.beginPath();
+  ctx.moveTo(...P(...mul(M,[-N,0]))); ctx.lineTo(...P(...mul(M,[N,0]))); ctx.moveTo(...P(...mul(M,[0,-N]))); ctx.lineTo(...P(...mul(M,[0,N]))); ctx.stroke(); ctx.restore();
+}
+function edgeLabel(s, side){ ctx.save(); ctx.font = font(11, 700); ctx.fillStyle = C.fg; ctx.globalAlpha = .6; ctx.textBaseline = 'middle';
+  if (side === 'r'){ ctx.textAlign = 'right'; ctx.fillText(s + ' →', W - 10, OY - 12); }
+  if (side === 'l'){ ctx.textAlign = 'left'; ctx.fillText('← ' + s, 10, OY - 12); }
+  if (side === 't'){ ctx.textAlign = 'left'; ctx.fillText('↑ ' + s, OX + 8, Math.max(14, 0) + (W < 520 ? 92 : 100)); }
+  if (side === 'b'){ ctx.textAlign = 'left'; ctx.fillText('↓ ' + s, OX + 8, H - 14); }
+  ctx.restore(); }
+function bg(M, lv){
+  const N = ext(), T = M && !nearM(M, I, 1e-6) ? M : null;
+  if (TH === 'color'){ drawPlane(); lines(I, C.fg, 1, N, .07);
+    if (T){ lines(T, C.fg, 1, N*2, .32, true); axesOf(T, .7, C.fg); } else axesOf(I, .45, C.fg);
+    edgeLabel('red', 'r'); edgeLabel('green', 'l'); edgeLabel('blue', 'b'); return; }
+  lines(I, C.grid0, 1, N);
+  if (T){ lines(T, C.grid, 1.1, N*2, 1, true); axesOf(T); } else { lines(I, C.grid, 1, N, .55, true); axesOf(I); }
+  if (TH === 'data'){ const ax = lv.axes || ['height', 'weight']; edgeLabel(ax[0], 'r'); edgeLabel(ax[1], 'b');
+    if (!lv.ownData){ ctx.save(); ctx.fillStyle = C.w; ctx.globalAlpha = .5; const A = M || I;
+      DATA.forEach(p => { const q = P(...mul(A, p)); ctx.beginPath(); ctx.arc(q[0], q[1], 3.2, 0, 6.2832); ctx.fill(); }); ctx.restore(); } }
+}
+function arrow(a, b, color, o = {}){
+  const w = o.w || 3, alpha = o.alpha ?? 1;
+  const [x1,y1] = P(...a), [x2,y2] = P(...b), dx = x2-x1, dy = y2-y1, L = Math.hypot(dx,dy);
+  if (L < 1 || alpha <= 0) return;
+  const hl = Math.min((o.head || 4.2)*w, L*.5), ux = dx/L, uy = dy/L, bx = x2 - ux*hl, by = y2 - uy*hl, hw = hl*.55;
+  const path = () => { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(bx + ux, by + uy); };
+  const head = () => { ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(bx - uy*hw, by + ux*hw); ctx.lineTo(bx + uy*hw, by - ux*hw); ctx.closePath(); };
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (TH === 'color'){ ctx.globalAlpha = alpha*.85; ctx.strokeStyle = C.panel; ctx.lineWidth = w + 3.5; path(); ctx.stroke(); head(); ctx.lineWidth = 3.5; ctx.stroke(); }
+  ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w;
+  if (o.dash) ctx.setLineDash(o.dash); path(); ctx.stroke(); ctx.setLineDash([]); head(); ctx.fill(); ctx.restore();
+}
+function arr(a, b, key, o = {}){ arrow(a, b, C[key] || key, o);
+  if (TH === 'color' && o.sw !== false && (o.alpha ?? 1) > .5){ const v = sub(b, a); if (len(v) < .05) return;
+    const [x,y] = P(...b), d = unit([v[0], -v[1]]), cx = x + d[0]*15, cy = y + d[1]*15;
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, 9, 0, 6.2832); ctx.fillStyle = colorOf(v); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = C.panel; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 10.5, 0, 6.2832); ctx.lineWidth = 1; ctx.strokeStyle = C.fg; ctx.globalAlpha = .5; ctx.stroke(); ctx.restore(); } }
+function seg2(a, b, color, o = {}){
+  ctx.save(); ctx.globalAlpha = o.alpha ?? 1; ctx.strokeStyle = color; ctx.lineWidth = o.w || 1.5; ctx.lineCap = 'round';
+  if (o.dash) ctx.setLineDash(o.dash); ctx.beginPath(); ctx.moveTo(...P(...a)); ctx.lineTo(...P(...b)); ctx.stroke(); ctx.restore(); }
+function spanLine(d, color, o = {}, through = [0,0]){ if (len(d) < 1e-6) return; const u = sc(unit(d), ext()*2); seg2(sub(through,u), add(through,u), color, o); }
+function dotAt(p, color, r = 3, alpha = 1){ ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(...P(...p), r, 0, 6.2832); ctx.fill(); ctx.restore(); }
+function poly(pts, fill, fa, stroke){
+  ctx.save(); ctx.beginPath(); pts.forEach((p,k) => k ? ctx.lineTo(...P(...p)) : ctx.moveTo(...P(...p))); ctx.closePath();
+  ctx.globalAlpha = fa; ctx.fillStyle = fill; ctx.fill(); if (stroke){ ctx.globalAlpha = .9; ctx.strokeStyle = stroke; ctx.lineWidth = 1.5; ctx.stroke(); } ctx.restore(); }
+function lab(s, pos, key, o = {}){
+  if ((o.alpha ?? 1) <= 0) return; const [x,y] = P(...pos); ctx.save(); ctx.globalAlpha = o.alpha ?? 1; ctx.font = font(o.size || FS()+1, o.w || 700);
+  ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle';
+  if (TH === 'color'){ ctx.strokeStyle = C.panel; ctx.lineWidth = 4; ctx.lineJoin = 'round'; ctx.strokeText(s, x + (o.dx || 0), y + (o.dy || 0)); }
+  ctx.fillStyle = C[key] || C.fg; ctx.fillText(s, x + (o.dx || 0), y + (o.dy || 0)); ctx.restore(); }
+const tipLab = (s, v, key, o = {}) => lab(s, add(v, sc(unit(v), o.off || .45)), key, o);
+const origin = () => dotAt([0,0], C.fg, 3.2);
+function rightAngle(at, d1, d2){ const a = sc(unit(d1), .25), b = sc(unit(d2), .25); ctx.save(); ctx.strokeStyle = C.fg; ctx.globalAlpha = .7; ctx.lineWidth = 1.3; ctx.beginPath();
+  ctx.moveTo(...P(...add(at,a))); ctx.lineTo(...P(...add(add(at,a),b))); ctx.lineTo(...P(...add(at,b))); ctx.stroke(); ctx.restore(); }
+function targetMark(p, now){ const [x,y] = P(...p), r = 12 + 2*Math.sin(now/250); ctx.save(); ctx.strokeStyle = C.e; ctx.lineWidth = 2; ctx.globalAlpha = .9;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x-5,y); ctx.lineTo(x+5,y); ctx.moveTo(x,y-5); ctx.lineTo(x,y+5); ctx.stroke(); ctx.restore(); }
+function pathPts(pts, color){ ctx.save(); ctx.strokeStyle = color; ctx.globalAlpha = .55; ctx.lineWidth = 2; ctx.beginPath(); pts.forEach((p,k) => k ? ctx.lineTo(...P(...p)) : ctx.moveTo(...P(...p))); ctx.stroke(); ctx.restore();
+  pts.forEach((p,k) => dotAt(p, k ? color : C.fg, k ? 3.6 : 5, k ? .35 + .65*k/pts.length : 1)); }
+function powers(A, x0, n){ let x = x0.slice(); const pts = [x]; for (let k = 0; k < n; k++){ x = mul(A, x); if (len(x) > 80) break; pts.push(x); } return pts; }
+
+// HUD rows. Strings use {key:text}; {m:[col,..], c:[key|[k,k]], d} is a matrix.
+function parse(s){ const out = []; let last = 0; s.replace(/\{(\w+):([^}]*)\}/g, (m, k, tx, idx) => { if (idx > last) out.push({t:s.slice(last, idx)}); out.push({t:tx, k}); last = idx + m.length; return m; }); if (last < s.length) out.push({t:s.slice(last)}); return out; }
+function matW(it, fs){ const ml = Math.max(...it.m.flat().map(v => fmt(v, it.d ?? 1).length)); const cw = Math.max(2.2, ml*.62 + .9)*fs; return {cw, w: it.m.length*cw + fs*.9}; }
+function itemW(it, fs){ if (it.m) return matW(it, fs).w; ctx.font = font(fs, it.k ? 700 : 500); return ctx.measureText(it.t).width; }
+function drawMat(it, x, cy, fs){
+  const {cw, w} = matW(it, fs), h = fs*2.75, bx = x + fs*.25, ex = x + w - fs*.25;
+  ctx.strokeStyle = C.fg; ctx.lineWidth = 1.5; ctx.beginPath();
+  ctx.moveTo(bx+5, cy-h/2); ctx.lineTo(bx, cy-h/2); ctx.lineTo(bx, cy+h/2); ctx.lineTo(bx+5, cy+h/2);
+  ctx.moveTo(ex-5, cy-h/2); ctx.lineTo(ex, cy-h/2); ctx.lineTo(ex, cy+h/2); ctx.lineTo(ex-5, cy+h/2); ctx.stroke();
+  ctx.font = font(fs, 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  it.m.forEach((col, k) => { const ck = it.c && it.c[k], cx = x + fs*.45 + cw*(k+.5);
+    col.forEach((val, r) => { const key = Array.isArray(ck) ? ck[r] : ck; ctx.fillStyle = key ? C[key] : C.fg; ctx.fillText(fmt(val, it.d ?? 1), cx, cy + (r ? 1 : -1)*fs*.68); }); });
+}
+function hud(rows){
+  const fs = FS(), pad = fs*.75, gapM = fs*.45;
+  const R = rows.filter(Boolean).map(r => {
+    const items = (Array.isArray(r) ? r : [r]).flatMap(x => typeof x === 'string' ? parse(x) : [x]);
+    const h = items.some(i => i.m) ? fs*3.3 : fs*1.75; let w = 0;
+    items.forEach((it, k) => { w += itemW(it, fs) + (k && (it.m || items[k-1].m) ? gapM : 0); });
+    return {items, h, w}; });
+  if (!R.length) return;
+  const bw = Math.max(...R.map(r => r.w)) + pad*2, bh = R.reduce((s, r) => s + r.h, 0) + pad*.9, x0 = 10, y0 = 10;
+  ctx.save(); ctx.globalAlpha = .92; ctx.fillStyle = C.panel; ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0, y0, bw, bh, 10) : ctx.rect(x0, y0, bw, bh); ctx.fill(); ctx.stroke();
+  ctx.globalAlpha = 1; let y = y0 + pad*.45;
+  R.forEach(r => { let x = x0 + pad; const cy = y + r.h/2;
+    r.items.forEach((it, k) => { if (k && (it.m || r.items[k-1].m)) x += gapM;
+      if (it.m) drawMat(it, x, cy, fs);
+      else { ctx.font = font(fs, it.k ? 700 : 500); ctx.fillStyle = it.k ? (C[it.k] || C.fg) : C.fg; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(it.t, x, cy); }
+      x += itemW(it, fs); });
+    y += r.h; });
+  ctx.restore();
+}
+const vec = (v, c = ['i','j'], d) => ({m:[v], c:[c], d});
+const mat = (M, c = ['i','j'], d) => ({m:cols(M), c, d});
+
+// ---------- levels ----------
+const H_ = (p, key, base) => ({key, get: s => base ? add(base(s), s[p]) : s[p], set: (s, q) => { s[p] = base ? sub(q, base(s)) : q; }});
+const colH = [H_('a1','i'), H_('a2','j')];
+const MCOL = s => s._M || fromCols(s.a1, s.a2);
+const DEMOS = ['Combine', 'Transform', 'Solve', 'Angles', 'Eigen'];
+const ALL = ['math','color','data'];
+const LV = [];
+const L = (demo, o) => { o.demo = demo; o.themes = o.themes || ALL; LV.push(o); };
+const MA = [2,-1,1,1];
+
+// 1 COMBINE
+L(0, {id:'vector', name:'Vector', range:4.2, dur:8, rest:1,
+  say:'An arrow is a list of numbers', cap:{color:'Position = a color', data:'A point = one person'},
+  init:{v:[3,2]}, tryInit:{v:[1,1]},
+  anim: t => ({v: keys(t, [[0,[3,2]],[2,[3,2]],[3.2,[-2,3]],[4.4,[-2,3]],[5.6,[1,-2]],[6.8,[1,-2]],[8,[3,2]]])}),
+  handles:[H_('v','v')],
+  goal:{text:'Make {v:v} = [2, −1]', check: s => near(s.v, [2,-1]), target:[2,-1]},
+  draw(s){ const v = s.v; seg2([0,0], [v[0],0], C.i, {w:3.5}); seg2([v[0],0], v, C.j, {w:3.5});
+    lab(fmt(v[0]), [v[0]/2, 0], 'i', {dy: v[1] >= 0 ? 18 : -18}); lab(fmt(v[1]), [v[0], v[1]/2], 'j', {dx: v[0] >= 0 ? 20 : -20});
+    arr([0,0], v, 'v', {w:4.5}); origin(); hud([['{v:v} =', vec(v)]]); }});
+L(0, {id:'add', name:'Add', range:4, ox:-1, dur:8, rest:4.5,
+  say:'Add = tip to tail', cap:{color:'Add = mix two lights', data:'A person + a change'},
+  init:{v:[1,2], w:[3,-1]},
+  anim: t => ({sl: seg(t,1.2,2.4), sm: seg(t,2.8,3.8), sw: seg(t,4.6,5.8)*(1 - seg(t,7,7.8))}),
+  handles:[H_('v','v'), H_('w','w', s => s.v)],
+  goal:{text:'Make {v:v} + {w:w} = [−2, 3]', check: s => near(add(s.v,s.w), [-2,3]), target:[-2,3]},
+  draw(s){ const {v, w} = s, sl = s.sl ?? 1, sm = s.sm ?? 1, swp = s.sw ?? 0;
+    if (swp > 0){ arrow([0,0], w, C.w, {alpha:.4*swp}); arrow(w, add(w,v), C.v, {alpha:.4*swp}); }
+    arr([0,0], v, 'v', {w:4.5}); const b = sc(v, sl); arr(b, add(b,w), 'w', {w:4.5});
+    if (sm > 0) arr([0,0], sc(add(v,w), sm), 'fg', {w:4.5, alpha: Math.min(1, sm*1.5)});
+    origin(); hud([[vec(v,'v'), '+', vec(w,'w'), '=', vec(add(v,w),'fg')]]); }});
+L(0, {id:'scale', name:'Scale', range:4.2, dur:9, rest:2.6,
+  say:'Multiply = stretch, shrink, flip', cap:{color:'Negative = the opposite color', data:'Scale = change units'},
+  init:{v:[2,1], c:1},
+  anim: t => ({c: keys(t, [[0,1],[1,1],[2.2,2],[3.2,2],[4.6,-1],[5.6,-1],[6.6,.5],[7.4,.5],[8.6,1]])}),
+  sliders:[{p:'c', min:-2.5, max:2.5, step:.05, key:'v'}],
+  goal:{text:'Make {v:c}{v:v} = [−3, −1.5]', check: s => Math.abs(s.c + 1.5) < .03, target:[-3,-1.5]},
+  draw(s){ spanLine(s.v, C.v, {alpha:.3, dash:[5,6]}); arrow([0,0], s.v, C.v, {alpha:.25}); arr([0,0], sc(s.v, s.c), 'v', {w:4.5}); origin();
+    hud([`{v:c} = ${s.c.toFixed(2)}`, ['{v:c}', vec(s.v,'v'), '=', vec(sc(s.v, s.c), 'v')]]); }});
+L(0, {id:'combine', name:'Combine', range:4.4, dur:10, rest:3,
+  say:'Scale, then add', cap:{color:'Any color from two paints', data:'Blend two profiles'},
+  init:{v:[2,1], w:[-1,1.5], a:1, b:1},
+  anim: t => ({a: .5 + 1.6*Math.sin(2*Math.PI*t/10), b: .6 + 1.4*Math.sin(4*Math.PI*t/10 + 1)}),
+  sliders:[{p:'a', min:-3, max:3, step:.05, key:'v'}, {p:'b', min:-3, max:3, step:.05, key:'w'}],
+  goal:{text:'Reach the target', check: s => near(add(sc(s.v,s.a), sc(s.w,s.b)), [2,3], .08), target:[2,3]},
+  draw(s){ const av = sc(s.v, s.a), r = add(av, sc(s.w, s.b));
+    arrow([0,0], s.v, C.v, {alpha:.3}); arrow([0,0], s.w, C.w, {alpha:.3});
+    arr([0,0], av, 'v', {w:4, sw:false}); arr(av, r, 'w', {w:4, sw:false}); dotAt(r, C.fg, 5); origin();
+    if (TH === 'color') arr([0,0], r, 'fg', {w:2, alpha:.9, dash:[4,5]});
+    hud([`${fmt(s.a,2)}{v:v} + ${fmt(s.b,2)}{w:w}`, ['=', vec(r, 'fg')]]); }});
+const DOTS = []; for (let a = -4; a <= 4; a += .5) for (let b = -4; b <= 4; b += .5) DOTS.push([a,b]);
+DOTS.sort((p,q) => (Math.abs(p[0]) + Math.abs(p[1])) - (Math.abs(q[0]) + Math.abs(q[1])));
+L(0, {id:'span', name:'Span', range:5, dur:11.5, rest:4,
+  say:'Everything two arrows can reach', cap:{color:'Can two paints make every color?', data:'Redundant traits: a line, not a plane'},
+  init:{v:[2,1], w:[-1,1.5]},
+  anim: t => ({w: keys(t, [[0,[-1,1.5]],[5.5,[-1,1.5]],[7,[-1,-.5]],[10,[-1,-.5]],[11.4,[-1,1.5]]]), grow: seg(t,.5,3)}),
+  handles:[H_('w','w')],
+  goal:{text:'Make the span a line', check: s => Math.abs(cross(s.v, s.w)) < .06 && len(s.w) > .3},
+  draw(s){ const n = Math.floor(DOTS.length*(s.grow ?? 1)); ctx.save(); ctx.globalAlpha = .65;
+    for (let k = 0; k < n; k++){ const [a,b] = DOTS[k], q = add(sc(s.v,a), sc(s.w,b)), p = P(...q); ctx.fillStyle = TH === 'color' ? colorOf(q) : C.e; ctx.beginPath(); ctx.arc(p[0], p[1], TH === 'color' ? 3.4 : 2.3, 0, 6.2832); ctx.fill(); }
+    ctx.restore(); arr([0,0], s.v, 'v', {w:4.5}); arr([0,0], s.w, 'w', {w:4.5}); origin();
+    hud([Math.abs(cross(s.v, s.w)) < .06 ? 'span = {e:line}' : 'span = {e:plane}']); }});
+L(0, {id:'basis', name:'Basis', range:4, dur:9, rest:3.5, M: s => fromCols(s.b1, s.b2),
+  say:'Same point, new rulers', cap:{color:'New color axes, same color', data:'New axes: size and shape'},
+  init:{b1:[1,0], b2:[0,1]},
+  anim: t => ({b1: keys(t, [[0,[1,0]],[1,[1,0]],[2.5,[1,1]],[4,[1,1]],[5.5,[1,0]],[7.5,[1,0]],[8.8,[1,0]]]), b2: keys(t, [[0,[0,1]],[1,[0,1]],[2.5,[-1,1]],[4,[-1,1]],[5.5,[1,1]],[7.5,[1,1]],[8.8,[0,1]]])}),
+  handles:[H_('b1','i'), H_('b2','j')],
+  goal:{text:'Make {fg:p} = 1{i:b₁} + 1{j:b₂}', check: s => near(add(s.b1, s.b2), [3,1]) && Math.abs(cross(s.b1, s.b2)) > .05},
+  draw(s){ const p = [3,1], B = fromCols(s.b1, s.b2), ok = Math.abs(det(B)) > .02;
+    if (ok){ const c = mul(inv(B), p), x = sc(s.b1, c[0]); arr([0,0], x, 'i', {w:2.5, alpha:.6, dash:[6,5], sw:false}); arr(x, p, 'j', {w:2.5, alpha:.6, dash:[6,5], sw:false});
+      hud([`{fg:p} = ${fmt(c[0],2)}{i:b₁} + ${fmt(c[1],2)}{j:b₂}`]); } else hud(['{fg:p} = ?']);
+    arr([0,0], s.b1, 'i', {w:4.5}); arr([0,0], s.b2, 'j', {w:4.5}); tipLab('b₁', s.b1, 'i'); tipLab('b₂', s.b2, 'j');
+    dotAt(p, C.fg, 6); lab('p', p, 'fg', {dx:14, dy:-12}); origin(); }});
+
+// 2 TRANSFORM
+L(1, {id:'matrix', name:'Matrix', range:4.3, dur:8, rest:4.5, M: MCOL,
+  say:'A matrix moves the whole grid', cap:{color:'A matrix = a color filter', data:'A matrix remixes the measurements'},
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const u = keys(t, [[0,0],[1,0],[3.2,1],[5.8,1],[7.6,0]]); return {a1: lerpA([1,0],[2,1],u), a2: lerpA([0,1],[-1,1],u)}; },
+  handles: colH,
+  goal:{text:'Rotate a quarter turn', ghost:[0,-1,1,0], check: s => near(s.a1,[0,1]) && near(s.a2,[-1,0])},
+  draw(s){ arr([0,0], s.a1, 'i', {w:4.5}); arr([0,0], s.a2, 'j', {w:4.5}); tipLab('î′', s.a1, 'i'); tipLab('ĵ′', s.a2, 'j'); origin(); hud([['M =', mat(MCOL(s))]]); }});
+const KINDS = [['rotate', rot(Math.PI/4)], ['scale', [1.6,0,0,.7]], ['shear', [1,1,0,1]], ['mirror', [1,0,0,-1]], ['flatten', [1,0,0,0]]];
+const FSHAPE = [[0,0],[0,2],[1.2,2],[1.2,1.6],[.4,1.6],[.4,1.15],[1,1.15],[1,.75],[.4,.75],[.4,0]];
+L(1, {id:'kinds', name:'Kinds', range:3.6, dur:13, rest:1.2, M: MCOL,
+  say:'Rotate, scale, shear, mirror, flatten', cap:{color:'Saturate, tint, swap hues', data:'Re-weight and combine traits'},
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const k = Math.min(4, Math.floor(t/2.6)), tau = t - k*2.6, u = seg(tau,0,.9)*(1 - seg(tau,1.7,2.5)), M = lerpA(I, KINDS[k][1], u); return {_M:M, kname:KINDS[k][0]}; },
+  handles: colH,
+  goal:{text:'Mirror left ↔ right', ghost:[-1,0,0,1], check: s => near(s.a1,[-1,0]) && near(s.a2,[0,1])},
+  draw(s){ const M = MCOL(s); poly(FSHAPE.map(p => mul(M,p)), C.v, .4, C.v); const [c1,c2] = cols(M);
+    arr([0,0], c1, 'i', {w:4}); arr([0,0], c2, 'j', {w:4}); origin(); hud([[s.kname ? `{e:${s.kname}}` : 'M', mat(M)]]); }});
+const R90 = rot(Math.PI/2), SH = [1,1,0,1], SR = mm(SH, R90);
+L(1, {id:'compose', name:'Compose', range:4, dur:13.5, rest:6.5, M: s => s._M || mm(fromCols(s.a1, s.a2), R90),
+  say:'One move, then another = one matrix', cap:{color:'Filter on top of a filter', data:'Two remixes = one remix'},
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { let M, st;
+    if (t < 7.5){ M = mm(lerpA(I, SH, seg(t,4,6)), rot(Math.PI/2*seg(t,1,3))); st = t < 3.6 ? 1 : 2; }
+    else if (t < 9){ M = lerpA(SR, I, seg(t,7.5,8.6)); st = 0; }
+    else { M = lerpA(I, SR, seg(t,9,11)); if (t > 12) M = lerpA(SR, I, seg(t,12.2,13.3)); st = 3; }
+    return {_M:M, st}; },
+  handles:[H_('a1','e'), H_('a2','e')],
+  goal:{text:'Choose B so B·R matches the ghost', ghost:SR, check: s => near(s.a1,[1,0]) && near(s.a2,[1,1])},
+  draw(s){ const M = s._M || mm(fromCols(s.a1, s.a2), R90), [c1,c2] = cols(M);
+    arr([0,0], c1, 'i', {w:4.5}); arr([0,0], c2, 'j', {w:4.5}); origin();
+    if (s._try){ arrow([0,0], s.a1, C.e, {w:2.5, dash:[5,5]}); arrow([0,0], s.a2, C.e, {w:2.5, dash:[5,5]});
+      hud([[mat(fromCols(s.a1,s.a2), ['e','e']), mat(R90, ['fg','fg']), '=', mat(M)]]); }
+    else hud(s.st === 1 ? ['{e:R}', mat(R90, ['e','e'])] : s.st === 2 ? ['S·{e:R}', [mat(SH, ['fg','fg']), mat(R90, ['e','e'])]] : s.st === 3 ? [[mat(SH,['fg','fg']), mat(R90,['e','e']), '=', mat(SR)]] : []); }});
+L(1, {id:'det', name:'Det', range:4.2, dur:13, rest:3, M: MCOL,
+  say:'Determinant = area scale', cap:{color:'det 0 = colors get lost', data:'det = how much spread survives'},
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const A = keys(t, [[0,I],[1,I],[2.5,[2,0,0,1.5]],[3.5,[2,0,0,1.5]],[5,[1,1,0,1]],[6,[1,1,0,1]],[7.5,[1,2,.5,1]],[8.5,[1,2,.5,1]],[10,[0,1,1,0]],[11,[0,1,1,0]],[12.6,I]]); return {_M:A}; },
+  handles: colH,
+  goal:{text:'Make det = −2', check: s => Math.abs(det(MCOL(s)) + 2) < .06},
+  draw(s){ const A = MCOL(s), d = det(A), col = d >= 0 ? C.e : C.neg; poly([[0,0],[1,0],[1,1],[0,1]].map(p => mul(A,p)), col, .28, col);
+    const [c1,c2] = cols(A); arr([0,0], c1, 'i', {w:4}); arr([0,0], c2, 'j', {w:4}); origin();
+    lab(d.toFixed(2), mul(A,[.5,.5]), d >= 0 ? 'e' : 'neg', {size:FS()+2}); hud([`det = ${d.toFixed(2)}`, mat(A)]); }});
+const AI = [2,1,1,1];
+L(1, {id:'inverse', name:'Inverse', range:4, dur:8.5, rest:3.5, M: s => s._M || mm(fromCols(s.a1, s.a2), AI),
+  say:'The inverse undoes the move', cap:{color:'Undo a filter', data:'Undo a remix'},
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const u = keys(t, [[0,0],[1,0],[3,1],[4.2,1],[6.2,0],[8.5,0]]); return {_M: lerpA(I, AI, u), st: t < 4.2 ? 0 : t < 6.4 ? 1 : 2}; },
+  handles:[H_('a1','e'), H_('a2','e')],
+  goal:{text:'Choose B so B·A = I', ghost:I, check: s => near(s.a1,[1,-1]) && near(s.a2,[-1,2])},
+  draw(s){ const M = s._M || mm(fromCols(s.a1, s.a2), AI), [c1,c2] = cols(M), v = [1.5,1];
+    arrow([0,0], v, C.v, {alpha:.22}); arr([0,0], mul(M,v), 'v', {w:4.5}); arr([0,0], c1, 'i', {w:4}); arr([0,0], c2, 'j', {w:4}); origin();
+    if (s._try){ arrow([0,0], s.a1, C.e, {w:2.5, dash:[5,5]}); arrow([0,0], s.a2, C.e, {w:2.5, dash:[5,5]}); hud([[mat(fromCols(s.a1,s.a2),['e','e']), mat(AI,['fg','fg']), '=', mat(M)]]); }
+    else hud(s.st === 0 ? ['A', mat(AI)] : s.st === 1 ? ['{e:A⁻¹}', mat(inv(AI), ['e','e'])] : ['{e:A⁻¹}A = I']); }});
+L(1, {id:'null', name:'Null', range:5, dur:9, rest:5, M: MCOL,
+  say:'Flatten: some arrows land on 0', cap:{color:'Color-blind filter: some colors look alike', data:'Different people, same output'},
+  init:{a1:[1,0], a2:[0,1]}, tryInit:{a1:[1,.5], a2:[1,-1]},
+  anim: t => { const u = keys(t, [[0,0],[1.2,0],[3.6,1],[6.6,1],[8.4,0]]), A = lerpA(I, [1,2,.5,1], u); return {a1:[A[0],A[2]], a2:[A[1],A[3]]}; },
+  handles: colH,
+  goal:{text:'Send [1, 1] to 0', check: s => near(add(s.a1, s.a2), [0,0], .08) && len(s.a1) > .3},
+  draw(s){ const A = MCOL(s), d = det(A), r = Math.abs(d) > .02 ? 2 : (len(s.a1) + len(s.a2) > .05 ? 1 : 0);
+    if (r === 1){ const n = Math.hypot(A[0], A[1]) > .02 ? [A[1], -A[0]] : [A[3], -A[2]]; spanLine(n, C.e, {alpha:.25, w:2, dash:[6,6]}); spanLine(len(s.a1) > .02 ? s.a1 : s.a2, C.fg, {alpha:.5, w:2}); }
+    for (let x = -4; x <= 4; x++) for (let y = -4; y <= 4; y++){ const q = mul(A, [x,y]), z = len(q) < .05 && (x || y); dotAt(q, TH === 'color' ? colorOf([x,y]) : (z ? C.e : C.muted), z ? 5 : 3, z ? 1 : .8); }
+    if (s._try){ arr([0,0], mul(A,[1,1]), 'e', {w:3}); }
+    arr([0,0], s.a1, 'i', {w:4}); arr([0,0], s.a2, 'j', {w:4}); origin();
+    hud([`rank = ${r}`, `det = ${d.toFixed(2)}`]); }});
+const A3 = [[1.2,.3,0],[0,1,.2],[.2,0,1]], A2 = [[1,0,.5],[0,1,.5],[0,0,0]], A1 = [[1,.5,.8],[.6,.3,.48],[0,0,0]];
+const mat3 = k => k <= 1 ? lerpA(A3, A2, k) : lerpA(A2, A1, k - 1);
+const mul3 = (A,p) => A.map(r => r[0]*p[0] + r[1]*p[1] + r[2]*p[2]);
+const det3 = A => A[0][0]*(A[1][1]*A[2][2]-A[1][2]*A[2][1]) - A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0]) + A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]);
+function rank3(A){ if (Math.abs(det3(A)) > .02) return 3; for (let r1 = 0; r1 < 3; r1++) for (let r2 = r1+1; r2 < 3; r2++) for (let c1 = 0; c1 < 3; c1++) for (let c2 = c1+1; c2 < 3; c2++)
+  if (Math.abs(A[r1][c1]*A[r2][c2] - A[r1][c2]*A[r2][c1]) > .02) return 2; return A.flat().some(x => Math.abs(x) > .02) ? 1 : 0; }
+L(1, {id:'space', name:'3D', range:2.8, oy:-.6, dur:12, rest:4, custom:true, orbit:true, themes:['math'],
+  say:'Same ideas in 3D: volume, flattening', cap:{},
+  init:{k:0, yaw:.6, pitch:.45},
+  anim: t => ({k: keys(t, [[0,0],[2,0],[4.5,1],[6.5,1],[8.5,2],[10,2],[11.8,0]]), yaw: .6 + t*.35, pitch:.45}),
+  sliders:[{p:'k', min:0, max:2, step:.02, key:'e', label:'↓'}],
+  goal:{text:'Flatten it: volume 0', check: s => Math.abs(det3(mat3(s.k))) < .02},
+  draw(s){ const A = mat3(s.k), cy = Math.cos(s.yaw), sy = Math.sin(s.yaw), cp = Math.cos(s.pitch), sp = Math.sin(s.pitch);
+    const pr = p => { const x1 = p[0]*cy - p[1]*sy, y1 = p[0]*sy + p[1]*cy; return [x1, p[2]*cp + y1*sp]; };
+    ctx.save(); ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let k = -3; k <= 3; k++){ ctx.moveTo(...P(...pr([k,-3,0]))); ctx.lineTo(...P(...pr([k,3,0]))); ctx.moveTo(...P(...pr([-3,k,0]))); ctx.lineTo(...P(...pr([3,k,0]))); }
+    ctx.stroke(); ctx.restore();
+    [[1,0,0],[0,1,0],[0,0,1]].forEach(e => seg2(pr(sc3(e,-3)), pr(sc3(e,3)), C.axis, {w:1.3, alpha:.8}));
+    const V = []; for (let x = 0; x < 2; x++) for (let y = 0; y < 2; y++) for (let z = 0; z < 2; z++) V.push(pr(mul3(A,[x,y,z])));
+    const F = [[0,1,3,2],[4,5,7,6],[0,1,5,4],[2,3,7,6],[0,2,6,4],[1,3,7,5]];
+    F.forEach(f => poly(f.map(k => V[k]), C.e, .1, C.e));
+    arrow([0,0], pr(mul3(A,[1,0,0])), C.i, {w:4}); arrow([0,0], pr(mul3(A,[0,1,0])), C.j, {w:4}); arrow([0,0], pr(mul3(A,[0,0,1])), C.v, {w:4}); origin();
+    hud([`volume = ${det3(A).toFixed(2)}`, `rank = ${rank3(A)}`, s._try ? '{muted:drag to turn}' : null]); }});
+function sc3(e, k){ return e.map(x => x*k); }
+
+// 3 SOLVE
+const AS = [2,-1,1,1], BS = [3,3];
+L(2, {id:'axb', name:'Ax = b', range:4.4, dur:10, rest:8, M: () => AS,
+  say:'Which input lands on b?', cap:{color:'Which paint amounts make this color?', data:'Which weights give this result?'},
+  init:{x1:0, x2:0}, tryInit:{x1:.5, x2:.5},
+  anim: t => { const x = keys(t, [[0,[0,0]],[1,[0,0]],[2.5,[1,2]],[3.5,[1,2]],[5,[2.6,.4]],[6,[2.6,.4]],[7.5,[2,1]],[9.2,[2,1]],[10,[0,0]]]); return {x1:x[0], x2:x[1]}; },
+  sliders:[{p:'x1', min:-3, max:3, step:.05, key:'i', label:'x₁'}, {p:'x2', min:-3, max:3, step:.05, key:'j', label:'x₂'}],
+  goal:{text:'Find x so Ax = b', check: s => Math.abs(s.x1 - 2) < .03 && Math.abs(s.x2 - 1) < .03},
+  draw(s, t, now){ const [c1,c2] = cols(AS), p = sc(c1, s.x1), r = add(p, sc(c2, s.x2));
+    arrow([0,0], c1, C.i, {alpha:.3}); arrow([0,0], c2, C.j, {alpha:.3});
+    arr([0,0], p, 'i', {w:3.5, sw:false}); arr(p, r, 'j', {w:3.5, sw:false}); arr([0,0], r, 'v', {w:4.5}); targetMark(BS, now); lab('b', BS, 'e', {dx:20, dy:-14}); origin();
+    hud([[mat(AS), vec([s.x1, s.x2], ['i','j'], 2), '=', vec(r, 'v')], 'b = [3, 3]']); }});
+function lineEq(r, b, color, o = {}){ if (len(r) < .05) return; spanLine([-r[1], r[0]], color, o, sc(r, b/dot(r,r))); }
+const eqStr = (r, b) => `${fmt(r[0],2)}x + ${fmt(r[1],2)}y = ${fmt(b,2)}`.replace('+ −', '− ');
+const solve2 = (r1, r2, b) => { const d = cross(r1, r2); return Math.abs(d) < 1e-6 ? null : [(b[0]*r2[1] - r1[1]*b[1])/d, (r1[0]*b[1] - b[0]*r2[0])/d]; };
+L(2, {id:'rows', name:'Rows', range:4, dur:8, rest:1, themes:['math'],
+  say:'Each equation is a line; the answer is where they cross', cap:{},
+  init:{r2:[1,1]},
+  anim: t => ({r2: keys(t, [[0,[1,1]],[2,[1,1]],[4,[1,-.5]],[6,[1,-.5]],[8,[1,1]]])}),
+  handles:[H_('r2','j')],
+  goal:{text:'Make the lines never meet', check: s => Math.abs(cross([2,-1], s.r2)) < .06 && !near(s.r2, [2,-1], .1) && len(s.r2) > .3},
+  draw(s){ const r1 = [2,-1]; lineEq(r1, 3, C.i, {w:3}); lineEq(s.r2, 3, C.j, {w:3});
+    arrow([0,0], r1, C.i, {w:2, alpha:.35}); arrow([0,0], s.r2, C.j, {w:2.5, alpha:.6}); const x = solve2(r1, s.r2, [3,3]);
+    if (x && len(x) < 40){ dotAt(x, C.fg, 6); lab(`(${fmt(x[0],2)}, ${fmt(x[1],2)})`, x, 'fg', {dy:-18, size:FS()-1}); } origin();
+    hud([`{i:${eqStr(r1,3)}}`, `{j:${eqStr(s.r2,3)}}`, x ? null : '{e:no solution}']); }});
+L(2, {id:'elim', name:'Eliminate', range:4, ox:-1, oy:-.6, dur:9, rest:3.5, themes:['math'],
+  say:'Combine equations; the crossing stays put', cap:{},
+  init:{m:0, n:0},
+  anim: t => ({m: keys(t, [[0,0],[1,0],[3,.5],[8,.5],[8.9,0]]), n: keys(t, [[0,0],[4.5,0],[6.5,2/3],[8,2/3],[8.9,0]])}),
+  sliders:[{p:'m', min:-1, max:1.5, step:.05, key:'j'}],
+  goal:{text:'Remove x from line 2', check: s => Math.abs(1 - 2*s.m) < .02},
+  draw(s){ const r1 = [2,-1], b1 = 3, r2 = sub([1,1], sc(r1, s.m)), b2 = 3 - 3*s.m, n = s.n || 0, q1 = add(r1, sc(r2, n)), c1 = b1 + n*b2;
+    lineEq(q1, c1, C.i, {w:3}); lineEq(r2, b2, C.j, {w:3}); dotAt([2,1], C.fg, 6); lab('(2, 1)', [2,1], 'fg', {dx:30, dy:-14, size:FS()-1}); origin();
+    hud([`{i:${eqStr(q1,c1)}}`, `{j:${eqStr(r2,b2)}}`]); }});
+const AN = [1,2,.5,1];
+L(2, {id:'many', name:'None/Many', range:4.5, dur:9, rest:5, M: () => AN,
+  say:'No answer, or infinitely many', cap:{color:'Some colors can’t be made', data:'Some results are impossible'},
+  init:{b:[1,2]},
+  anim: t => ({b: keys(t, [[0,[-1,2]],[1,[-1,2]],[3,[2,1]],[4,[2,1]],[5,[2,1]],[6.5,[1,-2]],[8.5,[-1,2]]])}),
+  handles:[H_('b','v')],
+  goal:{text:'Give it infinitely many answers', check: s => Math.abs(cross(unit([1,.5]), s.b)) < .06},
+  draw(s){ const d = Math.abs(cross(unit([1,.5]), s.b)), on = d < .06;
+    spanLine([1,.5], C.fg, {w:2.5, alpha:.6});
+    if (on){ spanLine([2,-1], C.e, {w:4, alpha:.85}, [s.b[0], 0]); } else { const p = sc(unit([1,.5]), dot(unit([1,.5]), s.b)); seg2(s.b, p, C.muted, {dash:[4,5]}); }
+    arr([0,0], s.b, 'v', {w:4.5}); lab('b', s.b, 'v', {dx:16, dy:-14}); origin();
+    hud([[mat(AN), 'x =', vec(s.b, 'v')], on ? '{e:∞ solutions}' : '{neg:no solution}']); }});
+
+// 4 ANGLES
+L(3, {id:'dot', name:'Dot', range:3.8, dur:10, rest:1.5,
+  say:'Dot product = shadow × length', cap:{color:'How alike two colors are', data:'How alike two people are'},
+  init:{v:[3,1], w:[1,2]},
+  anim: t => { const th = t/10*Math.PI*2 + .6; return {w:[2.6*Math.cos(th), 2.6*Math.sin(th)]}; },
+  handles:[H_('v','v'), H_('w','w')],
+  goal:{text:'Make {v:v}·{w:w} = 0', check: s => Math.abs(dot(s.v,s.w)) < .06 && len(s.v) > .5 && len(s.w) > .5},
+  draw(s){ const d = dot(s.v,s.w), pr = sc(s.v, d/(dot(s.v,s.v) || 1)), col = d >= 0 ? C.pos : C.neg;
+    spanLine(s.v, C.v, {alpha:.3, dash:[5,6]}); seg2(s.w, pr, C.muted, {dash:[4,5]}); seg2([0,0], pr, col, {w:9, alpha:.45});
+    if (Math.abs(d) < .06 && len(s.v) > .5 && len(s.w) > .5) rightAngle([0,0], s.v, s.w);
+    arr([0,0], s.v, 'v', {w:4.5}); arr([0,0], s.w, 'w', {w:4.5}); tipLab('v', s.v, 'v', {off:.8}); tipLab('w', s.w, 'w', {off:.8}); origin();
+    hud([`{v:v}·{w:w} = {${d >= 0 ? 'pos' : 'neg'}:${d.toFixed(2)}}`]); }});
+L(3, {id:'project', name:'Project', range:3.8, dur:10, rest:2,
+  say:'Projection = closest point on a line', cap:{color:'Closest color you can make', data:'Best guess from one trait'},
+  init:{v:[3,1], w:[1,2.5]},
+  anim: t => { const th = t/10*Math.PI*2 + 1; return {w:[2.4*Math.cos(th) + .6, 2.4*Math.sin(th)]}; },
+  handles:[H_('w','w')],
+  goal:{text:'Make the shadow half of {v:v}', check: s => Math.abs(dot(s.w,s.v)/dot(s.v,s.v) - .5) < .02},
+  draw(s){ const k = dot(s.w,s.v)/dot(s.v,s.v), p = sc(s.v, k);
+    spanLine(s.v, C.v, {alpha:.35, dash:[5,6]}); arrow([0,0], s.v, C.v, {alpha:.4}); seg2(s.w, p, C.j, {dash:[5,5], w:2});
+    if (len(sub(s.w,p)) > .2 && len(p) > .2) rightAngle(p, sc(p,-1), sub(s.w,p));
+    arr([0,0], p, 'e', {w:5}); arr([0,0], s.w, 'w', {w:4}); tipLab('w', s.w, 'w', {off:.7}); origin();
+    hud([`{e:p} = ${fmt(k,2)}{v:v}`, '{j:error} ⟂ {v:line}']); }});
+L(3, {id:'orth', name:'Orthogonal', range:3.8, dur:8, rest:5,
+  say:'Remove the overlap → perpendicular', cap:{color:'Sliders that don’t interfere', data:'Uncorrelated features'},
+  init:{v1:[2,1], v2:[1,2]},
+  anim: t => ({k: keys(t, [[0,0],[1.5,0],[3.5,1],[6.5,1],[7.6,0]]), v2:[1,2]}),
+  handles:[H_('v2','w')],
+  goal:{text:'Make {w:v₂} already ⟂ {v:v₁}', check: s => Math.abs(dot(s.v1,s.v2)) < .06 && len(s.v2) > .5},
+  draw(s){ const p = sc(s.v1, dot(s.v2,s.v1)/dot(s.v1,s.v1)), k = s.k ?? 1, u = sub(s.v2, sc(p, k));
+    spanLine(s.v1, C.v, {alpha:.3, dash:[5,6]}); seg2(s.v2, p, C.muted, {dash:[4,5]}); arrow([0,0], p, C.e, {w:2.5, alpha:.5});
+    arr([0,0], s.v1, 'v', {w:4.5}); arr([0,0], s.v2, 'w', {w:3.5, alpha:.6}); arr([0,0], u, 'e', {w:4.5});
+    if (k > .97 && len(u) > .2) rightAngle([0,0], s.v1, u);
+    tipLab('v₁', s.v1, 'v'); tipLab('u₂', u, 'e'); origin(); hud(['{e:u₂} = {w:v₂} − proj', `{v:v₁}·{e:u₂} = ${fmt(dot(s.v1,u),2)}`]); }});
+L(3, {id:'fit', name:'Fit', range:4.2, dur:9, rest:7, ownData:true, themes:['math','data'], axes:['hours','score'],
+  say:'Best line = smallest total squares', cap:{data:'Hours studied → score'},
+  init:{y1:1.5, y2:-1},
+  anim: t => { const b1 = FIT_BEST.m*-FX + FIT_BEST.c, b2 = FIT_BEST.m*FX + FIT_BEST.c;
+    return {y1: keys(t, [[0,1.5],[1,1.5],[3,-3.5],[4.5,-1],[6.5,b1],[8,b1],[9,1.5]]), y2: keys(t, [[0,-1],[1,-1],[3,2],[4.5,3.2],[6.5,b2],[8,b2],[9,-1]])}; },
+  handles:[{key:'e', get: s => [-FX, s.y1], set: (s,q) => { s.y1 = q[1]; }}, {key:'e', get: s => [FX, s.y2], set: (s,q) => { s.y2 = q[1]; }}],
+  goal:{text:'Get the error within 2% of the best', check: s => { const m = (s.y2 - s.y1)/(2*FX); return fitErr(m, s.y1 + m*FX) <= FIT_EMIN*1.02; }},
+  draw(s){ const m = (s.y2 - s.y1)/(2*FX), c = s.y1 + m*FX, E = fitErr(m, c);
+    FIT.forEach(([x,y]) => { const yl = m*x + c, r = y - yl; poly([[x,yl],[x+Math.abs(r),yl],[x+Math.abs(r),y],[x,y]], C.e, .16, null); seg2([x,yl], [x,y], C.e, {w:1.5, alpha:.8}); });
+    seg2([-FX, s.y1], [FX, s.y2], C.v, {w:3.5}); FIT.forEach(p => dotAt(p, C.w, 5));
+    hud([`error = ${E.toFixed(2)}`, `best  = ${FIT_EMIN.toFixed(2)}`]); }});
+
+// 5 EIGEN
+const AE = [3,1,0,2];
+L(4, {id:'eigen', name:'Eigen', range:5, dur:12, rest:0,
+  say:'Arrows that only stretch', cap:{color:'Colors a filter only deepens or fades', data:'Directions only stretched'},
+  init:{v:[1.5,0]}, tryInit:{v:[1,1]},
+  anim: t => { const th = 2*Math.PI*t/12; return {v:[1.5*Math.cos(th), 1.5*Math.sin(th)]}; },
+  handles:[H_('v','v')],
+  goal:{text:'Find an arrow that stays on its line', check: s => len(s.v) > .4 && Math.abs(cross(unit(s.v), unit(mul(AE,s.v)))) < .02},
+  draw(s){ const Av = mul(AE, s.v), on = len(s.v) > .3 && Math.abs(cross(unit(s.v), unit(Av))) < .02;
+    spanLine(s.v, on ? C.e : C.muted, {alpha: on ? .8 : .3, dash:[6,6], w: on ? 2.5 : 1.5});
+    arr([0,0], Av, on ? 'e' : 'w', {w:4.5}); arr([0,0], s.v, 'v', {w:4.5}); origin();
+    hud([[mat(AE), vec(s.v,'v'), '=', vec(Av, on ? 'e' : 'w')], on ? `{e:λ = ${fmt(dot(Av,s.v)/dot(s.v,s.v),2)}}` : null]); }});
+L(4, {id:'powers', name:'Powers', range:5, dur:9, rest:8, M: MCOL,
+  say:'Apply it again and again', cap:{color:'Same filter, over and over', data:'This year → next year'},
+  init:{a1:[1.1,.1], a2:[.2,.9]},
+  anim: t => ({n: Math.min(14, Math.floor(t*1.8))}),
+  handles: colH,
+  goal:{text:'Make it shrink to 0', check: s => eig2(MCOL(s)).rho < .98},
+  draw(s){ const A = MCOL(s), e = eig2(A); if (e.real) e.vs.forEach(v => spanLine(v, C.e, {alpha:.5, w:2, dash:[6,6]}));
+    pathPts(powers(A, [1,1], s.n ?? 14), C.v); arr([0,0], s.a1, 'i', {w:3.5}); arr([0,0], s.a2, 'j', {w:3.5}); origin();
+    hud([e.real ? `{e:λ} = ${fmt(e.ls[0],2)}, ${fmt(e.ls[1],2)}` : `{e:|λ|} = ${fmt(e.rho,2)}`, e.rho < 1 ? '{ok:shrinks}' : '{neg:grows}']); }});
+const PD = [1,1,0,-1];
+L(4, {id:'diag', name:'Diagonal', range:4.4, dur:9, rest:4, M: s => mm(mm(PD, [s.l1,0,0,s.l2]), inv(PD)),
+  say:'In the right axes, it’s just stretching', cap:{color:'A filter = boost along two hues', data:'Stretch along natural axes'},
+  init:{l1:1, l2:1}, tryInit:{l1:3, l2:2},
+  anim: t => ({l1: keys(t, [[0,1],[1,1],[3,3],[6,3],[8,1]]), l2: keys(t, [[0,1],[1,1],[3,2],[6,2],[8,1]])}),
+  sliders:[{p:'l1', min:-1.5, max:3.5, step:.05, key:'e', label:'λ₁'}, {p:'l2', min:-1.5, max:3.5, step:.05, key:'e', label:'λ₂'}],
+  goal:{text:'Make it a projection (λ = 1 and 0)', check: s => (Math.abs(s.l1-1) < .03 && Math.abs(s.l2) < .03) || (Math.abs(s.l2-1) < .03 && Math.abs(s.l1) < .03)},
+  draw(s){ const A = mm(mm(PD, [s.l1,0,0,s.l2]), inv(PD)); lines(mm(A, PD), C.e, 1.2, ext(), .35);
+    const e1 = [1,0], e2 = [1,-1]; spanLine(e1, C.e, {alpha:.6, w:2}); spanLine(e2, C.e, {alpha:.6, w:2});
+    arr([0,0], sc(e1, s.l1), 'e', {w:4.5}); arr([0,0], sc(e2, s.l2), 'e', {w:4.5}); origin();
+    hud(['A = P{e:D}P⁻¹', ['{e:D} =', {m:[[s.l1,0],[0,s.l2]], c:['e','e'], d:2}]]); }});
+L(4, {id:'complex', name:'Spiral', range:4.4, dur:9, rest:8, M: MCOL,
+  say:'No arrow stays put → rotation', cap:{color:'Hue keeps turning', data:'Cycles: booms and busts'},
+  init:{a1:[.8,.5], a2:[-.5,.8]},
+  anim: t => ({n: Math.min(24, Math.floor(t*3))}),
+  handles: colH,
+  goal:{text:'Make it spiral outward', check: s => { const e = eig2(MCOL(s)); return !e.real && e.rho > 1.02; }},
+  draw(s){ const A = MCOL(s), e = eig2(A); pathPts(powers(A, [2,0], s.n ?? 24), C.v); arr([0,0], s.a1, 'i', {w:3.5}); arr([0,0], s.a2, 'j', {w:3.5}); origin();
+    hud([e.real ? `{e:λ} = ${fmt(e.ls[0],2)}, ${fmt(e.ls[1],2)}` : `{e:λ} = ${fmt(e.re,2)} ± ${fmt(e.im,2)}i`, `{e:|λ|} = ${fmt(e.rho,2)}`]); }});
+const AW = [2,1,.5,1.5], SW = svd2(AW), PHI = Math.atan2(SW.u1[1], SW.u1[0]);
+L(4, {id:'svd', name:'SVD', range:4, dur:10, rest:7, M: MCOL,
+  say:'Every matrix: turn, stretch, turn', cap:{color:'Any filter = turn, stretch, turn', data:'Main directions of spread'},
+  init:{a1:[1,0], a2:[0,1]}, tryInit:{a1:[2,.5], a2:[1,1.5]},
+  anim: t => { const u1 = seg(t,1,2.5), u2 = seg(t,3,4.5), u3 = seg(t,5,6.5), back = seg(t,8.5,9.8);
+    let M = mm(rot(PHI*u3), mm([lerp(1,SW.s1,u2),0,0,lerp(1,SW.s2,u2)], rot(-SW.th*u1))); M = lerpA(M, I, back);
+    return {_M:M, st: t < 2.8 ? 'Vᵀ: turn' : t < 4.8 ? 'Σ: stretch' : t < 8.5 ? 'U: turn' : ''}; },
+  handles: colH,
+  goal:{text:'Keep the circle a circle', check: s => { const d = svd2(MCOL(s)); return Math.abs(d.s1 - d.s2) < .05 && d.s2 > .3; }},
+  draw(s){ const A = MCOL(s), d = svd2(A);
+    ctx.save(); [[I, C.fg, .35, [4,5]], [A, C.v, .9, null]].forEach(([M, col, al, dash]) => { ctx.beginPath();
+      for (let k = 0; k <= 72; k++){ const a = k/72*Math.PI*2, p = P(...mul(M, [Math.cos(a), Math.sin(a)])); k ? ctx.lineTo(...p) : ctx.moveTo(...p); }
+      ctx.strokeStyle = col; ctx.globalAlpha = al; ctx.lineWidth = 2.5; ctx.setLineDash(dash || []); ctx.stroke(); }); ctx.restore();
+    if (s._try || !s.st){ arr([0,0], sc(d.u1, d.s1), 'e', {w:4}); if (d.s2 > .02) arr([0,0], sc(d.u2, d.s2), 'e', {w:4}); }
+    const [c1,c2] = cols(A); arrow([0,0], c1, C.i, {w:2.5, alpha:.7}); arrow([0,0], c2, C.j, {w:2.5, alpha:.7}); origin();
+    hud([s.st ? `{e:${s.st}}` : null, `{e:σ₁} = ${fmt(d.s1,2)}   {e:σ₂} = ${fmt(d.s2,2)}`]); }});
+L(4, {id:'pca', name:'Compress', range:4, dur:10, rest:8.5, ownData:true, themes:['math','data'],
+  say:'Two numbers → one, keep the spread', cap:{data:'Height + weight → one “size” score'},
+  init:{ang:0},
+  anim: t => ({ang: keys(t, [[0,-.6],[1,-.6],[4,1.9],[6,PCA_BEST],[9,PCA_BEST],[10,-.6]]), flat: seg(t,6.5,7.5)*(1 - seg(t,9.2,9.9))}),
+  handles:[{key:'e', get: s => [3.2*Math.cos(s.ang), 3.2*Math.sin(s.ang)], set: (s,q,raw) => { s.ang = Math.atan2(raw[1], raw[0]); }}],
+  goal:{text:'Keep the most spread', check: s => pcaPct(s.ang) >= PCA_MAX - .5},
+  draw(s){ const d = [Math.cos(s.ang), Math.sin(s.ang)], f = s.flat || 0; spanLine(d, C.e, {w:2.5, alpha:.8});
+    DATA.forEach(p => { const q = sc(d, dot(p,d)); seg2(p, q, C.muted, {w:1, alpha:.45*(1-f)}); dotAt(lerpA(p, q, f), C.w, 3.4, .75); dotAt(q, C.e, 2.4, .8*(1-f)); });
+    origin(); hud([`kept = ${pcaPct(s.ang).toFixed(1)}%`, `max  = ${PCA_MAX.toFixed(1)}%`]); }});
+
+// ---------- real-life scenes (pixel space) ----------
+function renderPhoto(M){ PHOTO.forEach((p, k) => { const q = mul(M, [p[1], p[2]]), c = rgbOf(q[0], q[1], p[0]); phImg.data.set([c[0], c[1], c[2], 255], k*4); }); phCtx.putImageData(phImg, 0, 0); return phCv; }
+const phOrig = document.createElement('canvas'); phOrig.width = PW; phOrig.height = PH; phOrig.getContext('2d').drawImage(renderPhoto(I), 0, 0);
+function pLine(x1, y1, x2, y2, color, w = 1.5, o = {}){ ctx.save(); ctx.globalAlpha = o.alpha ?? 1; ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round'; if (o.dash) ctx.setLineDash(o.dash); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore(); }
+function pArrow(x1, y1, x2, y2, color, w = 3, alpha = 1){ const dx = x2-x1, dy = y2-y1, L = Math.hypot(dx, dy); if (L < 2) return;
+  const hl = Math.min(4*w, L*.5), ux = dx/L, uy = dy/L, bx = x2 - ux*hl, by = y2 - uy*hl, hw = hl*.55;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(bx, by); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(bx - uy*hw, by + ux*hw); ctx.lineTo(bx + uy*hw, by - ux*hw); ctx.closePath(); ctx.fill(); ctx.restore(); }
+function pText(s, x, y, o = {}){ ctx.save(); ctx.font = font(o.size || FS(), o.w || 700); ctx.fillStyle = o.color || C.fg; ctx.globalAlpha = o.alpha ?? 1; ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y); ctx.restore(); }
+function pCircle(x, y, r, fill, o = {}){ ctx.save(); ctx.globalAlpha = o.alpha ?? 1; ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, 6.2832); if (fill){ ctx.fillStyle = fill; ctx.fill(); } if (o.stroke){ ctx.strokeStyle = o.stroke; ctx.lineWidth = o.lw || 2; if (o.dash) ctx.setLineDash(o.dash); ctx.stroke(); } ctx.restore(); }
+function pRect(x, y, w, h, fill, o = {}){ ctx.save(); ctx.globalAlpha = o.alpha ?? 1; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, o.r || 0) : ctx.rect(x, y, w, h); if (fill){ ctx.fillStyle = fill; ctx.fill(); } if (o.stroke){ ctx.strokeStyle = o.stroke; ctx.lineWidth = o.lw || 1.5; ctx.stroke(); } ctx.restore(); }
+function heart(x, y, r, color){ ctx.save(); ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x, y + r*.9); ctx.bezierCurveTo(x - r*1.6, y - r*.1, x - r*.8, y - r*1.3, x, y - r*.45); ctx.bezierCurveTo(x + r*.8, y - r*1.3, x + r*1.6, y - r*.1, x, y + r*.9); ctx.fill(); ctx.restore(); }
+function bulb(x, y, p){ const g = clamp(p/8, 0, 1); pCircle(x, y, 14 + 16*g, C.v, {alpha:.18*g}); pCircle(x, y, 11, g > 0 ? C.v : C.line, {alpha:.3 + .7*g, stroke:C.fg, lw:1.5}); pRect(x - 5, y + 11, 10, 7, C.axis, {r:2}); }
+// ---------- stories: real situation first, then the math ----------
+function beat(str, alpha = 1){ if (!str || alpha <= 0) return; let fs = FS(); const items = parse(str); let tw = 0;
+  for (;;){ tw = 0; items.forEach(it => { ctx.font = font(fs, it.k ? 700 : 500); it.w = ctx.measureText(it.t).width; tw += it.w; }); if (tw <= W - 48 || fs <= 10) break; fs -= .5; }
+  const pw = Math.min(W - 16, tw + 28), y = H - 28; pRect(W/2 - pw/2, y - 17, pw, 34, C.panel, {r:17, stroke:C.axis, alpha});
+  ctx.save(); ctx.globalAlpha = alpha; let x = W/2 - tw/2; items.forEach(it => { ctx.font = font(fs, it.k ? 700 : 500); ctx.fillStyle = it.k ? (C[it.k] || C.fg) : C.fg; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(it.t, x, y); x += it.w; }); ctx.restore(); }
+function beatAt(t, list){ const i = list.findIndex(([a,b]) => t >= a && t < b); if (i < 0) return; const e = list[i]; beat(e[2], Math.min(1, (t - e[0])/.3, (e[1] - t)/.3));
+  const n = list.length, y = H - 56, x0 = W/2 - (n - 1)*7; for (let k = 0; k < n; k++) pCircle(x0 + k*14, y, k === i ? 4 : 3, k <= i ? C.e : C.line); }
+function apple(x, y, r){ pCircle(x, y, r, C.j); pLine(x, y - r, x + 2, y - r - 5, C.fg, 2); ctx.save(); ctx.fillStyle = C.i; ctx.beginPath(); ctx.ellipse(x + 5, y - r - 3, 4, 2, -.5, 0, 6.2832); ctx.fill(); ctx.restore(); }
+function bread(x, y, r){ pRect(x - r*1.25, y - r*.75, r*2.5, r*1.5, C.v, {r:r*.6}); for (let k = -1; k <= 1; k++) pLine(x + k*r*.7 - 2, y - r*.4, x + k*r*.7 + 2, y + r*.2, C.panel, 1.5, {alpha:.7}); }
+const SQ = [[0,0],[1,0],[1,1],[0,1]];
+function warpPhoto(A, u0, v0, uw, vh){ // draw phOrig over world rect [u0,u0+uw]x[v0,v0+vh] mapped by A
+  const a = S*A[0], b = -S*A[2], c = -S*A[1], d = S*A[3]; if (Math.abs(det(A)) < .01) return;
+  ctx.save(); ctx.transform(a, b, c, d, OX + S*(A[0]*u0 + A[1]*(v0 + vh)), OY - S*(A[2]*u0 + A[3]*(v0 + vh)));
+  ctx.imageSmoothingEnabled = true; ctx.drawImage(phOrig, 0, 0, PW, PH, 0, 0, uw, vh); ctx.restore(); }
+function outline(pts, color, w = 2){ ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = w; ctx.lineJoin = 'round'; ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(...P(...p)) : ctx.moveTo(...P(...p))); ctx.closePath(); ctx.stroke(); ctx.restore(); }
+function plane(x, y, ang, size, color){ ctx.save(); ctx.translate(x, y); ctx.rotate(-ang); ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(size, 0); ctx.lineTo(-size*.7, -size*.18); ctx.lineTo(-size, -size*.5); ctx.lineTo(-size*.85, 0); ctx.lineTo(-size, size*.5); ctx.lineTo(-size*.7, size*.18); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(size*.2, 0); ctx.lineTo(-size*.25, -size*.9); ctx.lineTo(-size*.4, -size*.9); ctx.lineTo(-size*.2, 0); ctx.lineTo(-size*.4, size*.9); ctx.lineTo(-size*.25, size*.9); ctx.closePath(); ctx.fill(); ctx.restore(); }
+
+const STORIES = {
+dot: {say:'What does this basket cost?', dur:14, rest:10, custom:true,
+  init:{a:3, b:2}, tryInit:{a:1, b:1},
+  sliders:[{p:'a', min:0, max:6, step:1, key:'j', label:'apples'}, {p:'b', min:0, max:6, step:1, key:'v', label:'bread'}],
+  goal:{text:'Spend exactly $10', check: s => Math.abs(2*s.a + 1.5*s.b - 10) < 1e-6},
+  draw(s, t){ const T = s._try ? 99 : t, a = s.a, b = s.b, fs = FS(), cx = W/2, sx = Math.min(W*.2, 110);
+    const shY = H*.1; apple(cx - sx, shY, 13); bread(cx + sx, shY, 12);
+    pText('$2.00 each', cx - sx, shY + 28, {size:fs - 2, color:C.muted, w:500}); pText('$1.50 each', cx + sx, shY + 28, {size:fs - 2, color:C.muted, w:500});
+    const bY = H*.34, bw = Math.min(W*.8, 320), n = s._try ? a + b : clamp(Math.floor((T - 1.2)/.35) + 1, 0, a + b);
+    ctx.save(); ctx.beginPath(); ctx.moveTo(cx - bw/2, bY - 22); ctx.lineTo(cx + bw/2, bY - 22); ctx.lineTo(cx + bw/2 - 18, bY + 26); ctx.lineTo(cx - bw/2 + 18, bY + 26); ctx.closePath();
+    ctx.fillStyle = C.grid0; ctx.fill(); ctx.strokeStyle = C.axis; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    const step = Math.min(30, (bw - 50)/Math.max(1, a + b)), x0 = cx - step*(a + b - 1)/2;
+    for (let i = 0; i < n; i++){ const x = x0 + i*step; i < a ? apple(x, bY + 2, 10) : bread(x, bY + 2, 9); }
+    pText(`${a} apples · ${b} loaves`, cx, bY + 44, {size:fs - 1, w:500});
+    const u = s._try ? 1 : seg(T, 4.5, 5.5), vy = H*.6, q = {m:[[a, b]], c:[['j','v']], d:0}, p = {m:[[2, 1.5]], c:[['j','v']], d:2};
+    if (u > 0){ ctx.save(); ctx.globalAlpha = u; const wq = matW(q, fs).w, wp = matW(p, fs).w, xq = 14, xp = xq + wq + fs*1.6, xr = xp + wp + 12;
+      pText('how many', xq + wq/2, vy - fs*2.2, {size:11, color:C.muted, w:500}); pText('price', xp + wp/2, vy - fs*2.2, {size:11, color:C.muted, w:500});
+      const p1 = s._try ? 1 : seg(T, 6, 6.6), p2 = s._try ? 1 : seg(T, 7, 7.6), hl = s._try ? -1 : T < 7 && T > 6 ? 0 : T < 8 && T > 7 ? 1 : -1;
+      if (hl >= 0) pRect(xq - 4, vy + (hl ? 0 : -fs*1.35), W - xq - 8, fs*1.35, hl ? C.v : C.j, {alpha:.12, r:6});
+      ctx.globalAlpha = u; drawMat(q, xq, vy, fs); pText('·', xq + wq + fs*.8, vy, {size:fs + 6}); drawMat(p, xp, vy, fs);
+      pText(`→ ${a} × 2.00 = ${(2*a).toFixed(2)}`, xr, vy - fs*.68, {align:'left', size:fs - 1, color:C.j, alpha:p1*u});
+      pText(`→ ${b} × 1.50 = ${(1.5*b).toFixed(2)}`, xr, vy + fs*.68, {align:'left', size:fs - 1, color:C.v, alpha:p2*u}); ctx.restore(); }
+    const u3 = s._try ? 1 : seg(T, 8.2, 9); pText(`Total  $${(2*a + 1.5*b).toFixed(2)}`, cx, H*.8, {size:fs + 8, alpha:u3});
+    if (!s._try) beatAt(T, [[1.2,4.5,'3 apples + 2 loaves. Total?'],[4.5,6,'Write each as a list'],[6,8.2,'Multiply matching rows'],[8.2,14,'Add them up = {e:dot product}']]); }},
+det: {say:'How much paper does the resized photo need?', dur:18.5, rest:6, range:2.4, ox:-1.2, oy:-.7, custom:true,
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const A = keys(t, [[0,I],[2.5,I],[4,[2,0,0,1.5]],[8,[2,0,0,1.5]],[9.5,[2,1,0,1.5]],[11,[2,1,0,1.5]],[12.5,[2,1,1,.5]],[14,[2,1,1,.5]],[15.5,[-1,0,0,1]],[17,[-1,0,0,1]],[18.5,I]]); return {a1:[A[0],A[2]], a2:[A[1],A[3]]}; },
+  handles:[H_('a1','i'), H_('a2','j')],
+  goal:{text:'Make it cover exactly 2 sheets', check: s => Math.abs(det(MCOL(s)) - 2) < .05},
+  draw(s, t){ const A = MCOL(s), d = det(A), g = .06;
+    for (let x = -3; x <= 5; x++) for (let y = -3; y <= 4; y++){ const p = P(x + g, y + 1 - g); pRect(p[0], p[1], S*(1 - 2*g), S*(1 - 2*g), C.grid0, {stroke:C.line, lw:1, r:3}); }
+    outline(SQ, C.muted, 1.5);
+    warpPhoto(A, 0, 0, 1, 1); const Q = SQ.map(p => mul(A, p)); outline(Q, C.fg, 2.5);
+    if (s._try){ lab('width', s.a1, 'i', {dy:22, size:FS() - 2}); lab('height', s.a2, 'j', {dy:-22, size:FS() - 2}); }
+    const sheets = Math.abs(d);
+    hud([`covers {e:${fmt(sheets, 2)}} sheet${Math.abs(sheets - 1) < .005 ? '' : 's'}`, `det = ${d.toFixed(2)}${d < -.02 ? '  {neg:mirrored}' : ''}`]);
+    if (!s._try) beatAt(t, [[0,2.5,'A photo the size of 1 sheet'],[2.5,5.5,'Stretch: 2× wide, 1.5× tall'],[5.5,8,'Now it covers 3 sheets: det = 3'],[8,11,'Slant it: still 3 sheets'],[11,14,'Squash it flat: 0 sheets, picture lost'],[14,17,'det −1: same size, mirror image'],[17,18.5,'det = how much the area multiplies']]); }},
+project: {say:'A plane flies 3 km. How much ground does it cover?', dur:16, rest:8, custom:true,
+  init:{ang:0},
+  anim: t => ({ang: keys(t, [[0,0],[3.5,0],[5,30],[8,30],[9.5,60],[12,60],[13,85],[14.5,85],[15.8,0]])}),
+  sliders:[{p:'ang', min:0, max:90, step:1, key:'w', label:'climb°'}],
+  goal:{text:'Make the ground distance exactly 2 km', check: s => Math.abs(3*Math.cos(s.ang*Math.PI/180) - 2) < .03},
+  draw(s, t, now){ const th = s.ang*Math.PI/180, fs = FS(), k = Math.min((W - 70)/3.3, (H - 230)/3.1), gx = 34, gy = H - 118, u = (now/4200) % 1;
+    const ex = gx + 3*Math.cos(th)*k, ey = gy - 3*Math.sin(th)*k, px = gx + (ex - gx)*u, py = gy + (ey - gy)*u, ground = 3*Math.cos(th);
+    pRect(0, gy, W, H - gy, C.grid0); pLine(0, gy, W, gy, C.axis, 2);
+    for (let km = 0; km <= 3; km++){ const x = gx + km*k; pLine(x, gy, x, gy + 7, C.axis, 1.5); pText(`${km}`, x, gy + 17, {size:11, w:500, color:C.muted}); }
+    pText('km', gx + 3*k + 18, gy + 17, {size:11, w:500, color:C.muted});
+    pCircle(W - 30, 112, 13, C.v); pText('noon', W - 52, 112, {align:'right', size:11, w:500, color:C.v});
+    pLine(gx, gy, ex, ey, C.w, 2, {dash:[6,6], alpha:.6});
+    pLine(px, py, px, gy, C.v, 1.5, {dash:[3,4], alpha:.7});
+    pLine(gx, gy + 1, px, gy + 1, C.fg, 7, {alpha:.5});
+    ctx.save(); ctx.globalAlpha = .45; ctx.translate(px, gy); ctx.scale(1, .25); plane(0, 0, 0, 16*Math.max(.35, Math.cos(th)), C.fg); ctx.restore();
+    plane(px, py, th, 16, C.w);
+    pText('flies 3 km', (gx + ex)/2 - Math.sin(th)*18, (gy + ey)/2 - Math.cos(th)*18 - 4, {size:fs - 1, color:C.w});
+    pText(`ground ${ground.toFixed(2)} km`, Math.max(gx + 60, gx + ground*k/2), gy - 16, {size:fs, color:C.fg});
+    hud(['ground = {w:flight} · ground direction', `= ${ground.toFixed(2)} km`]);
+    if (!s._try) beatAt(t, [[0,3.5,'A plane flies 3 km'],[3.5,6.5,'Its noon shadow tracks the ground'],[6.5,9.5,'Climb steeper → less ground'],[9.5,12.5,'Ground part = {e:projection}'],[12.5,16,'Straight up → 0 km of ground']]); }},
+eigen: {say:'When you stretch a photo, which arrows keep their direction?', dur:19, rest:7, range:2.1, custom:true,
+  init:{sx:1, sy:1, sk:0}, tryInit:{sx:1.5, sy:1, sk:.5},
+  anim: t => { const A = keys(t, [[0,[1,0,1]],[2,[1,0,1]],[3.5,[2,0,1]],[8.5,[2,0,1]],[10,[1,.9,1]],[12,[1,.9,1]],[12.6,[1,0,1]],[19,[1,0,1]]]); return {sx:A[0], sk:A[1], sy:A[2], globe: seg(t,12.4,13)*(1 - seg(t,18.4,19))}; },
+  sliders:[{p:'sx', min:.5, max:2.5, step:.05, key:'i', label:'wide'}, {p:'sy', min:.5, max:2.5, step:.05, key:'j', label:'tall'}, {p:'sk', min:-1.5, max:1.5, step:.05, key:'e', label:'slant'}],
+  goal:{text:'Make it 2× bigger with no arrow turning', check: s => Math.abs(s.sx - 2) < .03 && Math.abs(s.sy - 2) < .03 && Math.abs(s.sk) < .03},
+  draw(s, t, now){ const A = [s.sx, s.sk, 0, s.sy], gl = s.globe || 0, fs = FS();
+    if (gl < 1){ ctx.save(); ctx.globalAlpha = 1 - gl;
+      outline([[-1,-.625],[1,-.625],[1,.625],[-1,.625]], C.muted, 1.2);
+      warpPhoto(A, -1, -.625, 2, 1.25); outline([[-1,-.625],[1,-.625],[1,.625],[-1,.625]].map(p => mul(A, p)), C.fg, 2);
+      for (let k = 0; k < 16; k++){ const a = k*Math.PI/8, d0 = [Math.cos(a)*.5, Math.sin(a)*.5], d1 = mul(A, d0), keep = Math.abs(cross(unit(d0), unit(d1))) < .01 && dot(d0, d1) > 0;
+        arrow([0,0], d1, keep ? C.e : C.fg, {w: keep ? 4 : 2.5, alpha: keep ? 1 : .55});
+        if (keep && (k === 0 || k === 4)) lab(`×${fmt(len(d1)/.5, 2)}`, add(d1, sc(unit(d1), .3)), 'e', {size:fs}); }
+      ctx.restore(); }
+    if (gl > 0){ const cx = W/2, cy = H*.45, R = Math.min(W, H)*.3, tau = .35, ph = now/3500; ctx.save(); ctx.globalAlpha = gl;
+      pCircle(cx, cy, R, C.grid0, {stroke:C.axis, lw:2});
+      for (let lat = -60; lat <= 60; lat += 30) for (let lo = 0; lo < 16; lo++){ const la = lat*Math.PI/180, lon = lo*Math.PI/8 + ph;
+        const x = Math.cos(la)*Math.sin(lon), y = Math.sin(la), z = Math.cos(la)*Math.cos(lon), y2 = y*Math.cos(tau) - z*Math.sin(tau), z2 = y*Math.sin(tau) + z*Math.cos(tau);
+        pCircle(cx + R*x, cy - R*y2, 3.2, C.w, {alpha: gl*(z2 > 0 ? .9 : .2)}); }
+      const ay = R*1.35*Math.cos(tau); pLine(cx, cy - ay, cx, cy + ay, C.e, 4, {alpha:gl}); pCircle(cx, cy - R*Math.cos(tau), 5, C.e, {alpha:gl});
+      pText('axis', cx + 14, cy - ay + 6, {align:'left', color:C.e, size:fs}); ctx.restore(); }
+    if (gl < .5) hud([s._try ? `{e:${16 - [...Array(16)].filter((_, k) => { const a = k*Math.PI/8, d0 = [Math.cos(a), Math.sin(a)], d1 = mul(A, d0); return !(Math.abs(cross(unit(d0), unit(d1))) < .01 && dot(d0, d1) > 0); }).length}} of 16 arrows keep direction` : '{e:purple} = keeps its direction']);
+    if (!s._try) beatAt(t, [[0,2,'Arrows printed on a photo'],[2,5.5,'Stretch it 2× wide'],[5.5,8.5,'Only ↔ and ↕ keep their direction'],[8.5,12.4,'Slant it: only ↔ survives'],[12.4,16,'Spin a globe: only the axis stays put'],[16,19,'Unturned directions = {e:eigenvectors}']]); }},
+};
+// ---------- full-course stories ----------
+const LB = id => LV.find(l => l.id === id);
+const dirW = (x, pos, neg) => `${fmt(Math.abs(x))} ${x >= 0 ? pos : neg}`;
+function city(){ const g = .1; for (let x = -7; x <= 8; x++) for (let y = -6; y <= 7; y++){ const p = P(x + g, y + 1 - g); pRect(p[0], p[1], S*(1 - 2*g), S*(1 - 2*g), C.grid0, {r:4}); } }
+function house(p, color, name){ const [x, y] = P(...p); pRect(x - 9, y - 7, 18, 13, color, {r:2}); ctx.save(); ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(x - 12, y - 6); ctx.lineTo(x, y - 17); ctx.lineTo(x + 12, y - 6); ctx.fill(); ctx.restore(); if (name) pText(name, x, y + 17, {size:11, color, w:700}); }
+function drone(p){ const [x, y] = P(...p); [[-7,-7],[7,-7],[-7,7],[7,7]].forEach(([a,b]) => pCircle(x + a, y + b, 4.5, null, {stroke:C.fg, lw:1.5})); pRect(x - 5, y - 5, 10, 10, C.fg, {r:3}); }
+function axesLab(xl, yl){ pText(xl + ' →', W - 10, OY - 12, {align:'right', size:11, w:600, color:C.muted}); pText('↑ ' + yl, OX + 8, 104, {align:'left', size:11, w:600, color:C.muted}); }
+function plotBg(xl, yl){ lines(I, C.grid0, 1, ext()); axesOf(I); axesLab(xl, yl); }
+const eqS = (r, c) => `${fmt(r[0],2)}a + ${fmt(r[1],2)}b = ${fmt(c,2)}`.replace('+ −', '− ');
+const RECT = [[-.8,-.5],[.8,-.5],[.8,.5],[-.8,.5]];
+const shX = (p, sun) => p[0] - p[1]*sun[0]/sun[1];
+const BAL = [[-2.5,1.5,'j'],[-.5,.5,'w']];
+const TOOLS = [['rotate', rot(Math.PI/6), 'Rotate'], ['zoom', [1.5,0,0,1.5], 'Zoom: ×1.5 both ways'], ['stretch', [1.6,0,0,1], 'Stretch wide'], ['slant', [1,.6,0,1], 'Slant, like italics'], ['mirror', [-1,0,0,1], 'Mirror: the selfie flip'], ['flatten', [1,0,0,0], 'Flatten to a line']];
+Object.assign(STORIES, {
+vector: {say:'How do you tell a drone where to go?', dur:12, rest:9, range:3.2, ox:-1.2, oy:-1, custom:true,
+  init:{v:[3,2]}, tryInit:{v:[1,1]}, anim: t => ({u: seg(t,1.5,5)}),
+  handles:[H_('v','v')],
+  goal:{text:'Send the drone to the café', check: s => near(s.v, [-1,2])},
+  draw(s, t){ city(); const v = s.v, u = s.u ?? 1, e = [v[0], 0], a = clamp(u*2, 0, 1), b = clamp(u*2 - 1, 0, 1);
+    seg2([0,0], sc(e, a), C.i, {w:5, alpha:.8}); if (b > 0) seg2(e, add(e, [0, v[1]*b]), C.j, {w:5, alpha:.8});
+    if (s._try) house([-1,2], C.e, 'café'); house([0,0], C.fg, 'depot');
+    if (s._try || t > 5) arr([0,0], v, 'v', {w:3.5, alpha: s._try ? 1 : seg(t,5,6)});
+    drone(b > 0 ? add(e, [0, v[1]*b]) : sc(e, a));
+    if (Math.abs(v[0]) > .05) lab(dirW(v[0],'east','west'), [v[0]/2, 0], 'i', {dy: v[1] >= 0 ? 18 : -18, size:FS()-1});
+    if (Math.abs(v[1]) > .05 && b > .5) lab(dirW(v[1],'north','south'), [v[0], v[1]/2], 'j', {align: v[0] >= 0 ? 'left' : 'right', dx: v[0] >= 0 ? 10 : -10, size:FS()-1});
+    hud([['trip =', vec(v)]]);
+    if (!s._try) beatAt(t, [[0,1.5,'A drone waits at the depot'],[1.5,5,'Fly 3 blocks east, 2 north'],[5,8.5,'The whole trip = one arrow'],[8.5,12,'Arrow = list [3, 2] = {e:vector}']]); }},
+add: {say:'Two trips in a row: where do you end up?', dur:13, rest:7, range:3.4, ox:-1.4, oy:-1.2, custom:true,
+  init:{v:[2,1], w:[1,2]}, tryInit:{v:[1,0], w:[0,1]}, anim: t => ({u1: seg(t,1,3), u2: seg(t,3.5,5.5), sm: seg(t,6,7), sw: seg(t,8.5,10.5)}),
+  handles:[H_('v','v'), H_('w','w', s => s.v)],
+  goal:{text:'End both trips at the café', check: s => near(add(s.v, s.w), [3,-1])},
+  draw(s, t){ city(); const {v, w} = s, u1 = s.u1 ?? 1, u2 = s.u2 ?? 1, sm = s.sm ?? 1, sw = s.sw ?? 0;
+    if (s._try) house([3,-1], C.e, 'café'); house([0,0], C.fg, 'depot');
+    if (sw > 0){ arrow([0,0], sc(w, sw), C.w, {w:3, alpha:.45}); if (sw > .99) arrow(w, add(w, v), C.v, {w:3, alpha:.45}); }
+    arr([0,0], sc(v, u1), 'v', {w:4}); if (u2 > 0) arr(v, add(v, sc(w, u2)), 'w', {w:4});
+    if (sm > 0) arr([0,0], add(v, w), 'fg', {w:3, alpha:sm, dash:[7,5]});
+    drone(u2 > 0 ? add(v, sc(w, u2)) : sc(v, u1));
+    lab('trip 1', sc(v, .5), 'v', {dy:-16, size:FS()-2}); if (u2 > .5) lab('trip 2', add(v, sc(w, .5)), 'w', {dx:34, size:FS()-2});
+    hud([[vec(v,'v'), '+', vec(w,'w'), '=', vec(add(v,w),'fg')]]);
+    if (!s._try) beatAt(t, [[0,3,'Trip 1: 2 east, 1 north'],[3,6,'Then trip 2: 1 east, 2 north'],[6,8.5,'Same as one trip: [3, 3]'],[8.5,13,'Either order, same spot: {e:add}']]); }},
+scale: {say:'How much flour and sugar for more batches?', dur:13, rest:4, custom:true,
+  init:{c:1}, anim: t => ({c: keys(t, [[0,1],[3,1],[4.2,2],[6.5,2],[7.7,.5],[9.5,.5],[10.7,3],[12,3],[12.9,1]])}),
+  sliders:[{p:'c', min:0, max:4, step:.5, key:'e', label:'batches'}],
+  goal:{text:'Use exactly 5 cups of flour', check: s => Math.abs(2*s.c - 5) < 1e-6},
+  draw(s, t){ const c = s.c, fs = FS(), base = H - 110, cw = Math.min(70, W*.18), ch = 20;
+    [[W*.3, 2*c, C.v, 'flour'], [W*.7, c, C.w, 'sugar']].forEach(([x, n, col, nm]) => {
+      for (let k = 0; k < Math.ceil(n - 1e-9); k++){ const f = Math.min(1, n - k), y = base - (k + 1)*(ch + 4);
+        pRect(x - cw/2, y, cw, ch, null, {stroke:col, r:4, lw:1.5}); pRect(x - cw/2, y + ch*(1 - f), cw, ch*f, col, {r:4, alpha:.85}); }
+      pText(`${fmt(n, 1)} cups`, x, base + 16, {size:fs, color:col}); pText(nm, x, base + 34, {size:11, w:500, color:C.muted}); });
+    hud([[`{e:${fmt(c,1)}} ×`, vec([2,1], ['v','w']), '=', vec([2*c, c], ['v','w'])]]);
+    if (!s._try) beatAt(t, [[0,3,'1 batch: 2 cups flour, 1 cup sugar'],[3,6.5,'Double it: every amount ×2'],[6.5,9.5,'Half a batch: every amount ×0.5'],[9.5,13,'{e:Scaling}: multiply every entry']]); }},
+combine: {say:'Which mix of oats and beans hits your nutrition goal?', dur:14, rest:9, range:4.3, ox:-2.8, oy:-2.3, custom:true,
+  init:{a:1, b:2}, tryInit:{a:.5, b:.5},
+  anim: t => ({a: keys(t, [[0,0],[2,0],[3.5,1],[14,1]]), b: keys(t, [[0,0],[5,0],[7,2],[14,2]])}),
+  sliders:[{p:'a', min:0, max:3, step:.5, key:'v', label:'oats'}, {p:'b', min:0, max:3, step:.5, key:'w', label:'beans'}],
+  goal:{text:'Hit 7 g protein, 4 g fiber', check: s => near(add(sc([3,1], s.a), sc([1,2], s.b)), [7,4], .01)},
+  draw(s, t, now){ plotBg('protein (g)', 'fiber (g)'); const p = sc([3,1], s.a), r = add(p, sc([1,2], s.b)), gp = s._try ? [7,4] : [5,5];
+    targetMark(gp, now); lab('goal', gp, 'e', {dx:28, size:FS()-2});
+    arr([0,0], p, 'v', {w:4}); arr(p, r, 'w', {w:4}); dotAt(r, C.fg, 5);
+    if (s.a > 0) lab(`${fmt(s.a,1)} oats`, sc(p, .5), 'v', {dy:16, size:FS()-2}); if (s.b > 0) lab(`${fmt(s.b,1)} beans`, add(p, [s.b/2, s.b]), 'w', {dx:-44, size:FS()-2});
+    hud([`${fmt(s.a,1)} {v:oats} + ${fmt(s.b,1)} {w:beans}`, ['=', vec(r, 'fg')]]);
+    if (!s._try) beatAt(t, [[0,2,'Goal: 5 g protein, 5 g fiber'],[2,4.5,'1 cup oats: 3 protein, 1 fiber'],[4.5,7.5,'2 cups beans: 1 + 2 each'],[7.5,10.5,'Lands right on the goal'],[10.5,14,'Scale + add = {e:linear combination}']]); }},
+span: {say:'If a drone can only drive along two streets, where can it reach?', dur:13, rest:5, range:4.5, custom:true,
+  init:{v:[2,1], w:[-1,1.5]}, anim: t => ({w: keys(t, [[0,[-1,1.5]],[7,[-1,1.5]],[8.5,[-2,-1]],[11.5,[-2,-1]],[12.8,[-1,1.5]]]), grow: seg(t,2,5)}),
+  handles:[H_('w','w')],
+  goal:{text:'Trap the drone on one line', check: s => Math.abs(cross(s.v, s.w)) < .06 && len(s.w) > .3},
+  draw(s, t){ city(); spanLine(s.v, C.v, {w:6, alpha:.3}); spanLine(s.w, C.w, {w:6, alpha:.3});
+    const n = Math.floor(DOTS.length*(s.grow ?? 1)); ctx.save(); ctx.fillStyle = C.e; ctx.globalAlpha = .7;
+    for (let k = 0; k < n; k++){ const [a,b] = DOTS[k], q = P(...add(sc(s.v,a), sc(s.w,b))); ctx.beginPath(); ctx.arc(q[0], q[1], 2.6, 0, 6.2832); ctx.fill(); } ctx.restore();
+    arr([0,0], s.v, 'v', {w:4}); arr([0,0], s.w, 'w', {w:4}); tipLab('Main St', s.v, 'v', {off:.9, size:FS()-2}); tipLab('2nd St', s.w, 'w', {off:.9, size:FS()-2}); house([0,0], C.fg);
+    hud([Math.abs(cross(s.v, s.w)) < .06 ? 'reachable: {neg:one line}' : 'reachable: {e:everywhere}']);
+    if (!s._try) beatAt(t, [[0,2,'The drone can use only 2 streets'],[2,5,'Any amount, forward or back'],[5,7.5,'Purple = every spot it can reach'],[7.5,10.5,'Parallel streets: stuck on a line'],[10.5,13,'Reachable spots = the {e:span}']]); }},
+basis: {say:'Can two people describe the same café differently?', dur:13, rest:8, range:3.4, ox:-1.2, oy:-.8, custom:true,
+  init:{b1:[1,0], b2:[0,1]}, anim: t => ({b1: keys(t, [[0,[1,0]],[4,[1,0]],[5.5,[2,1]],[13,[2,1]]]), b2: keys(t, [[0,[0,1]],[4,[0,1]],[5.5,[1,0]],[13,[1,0]]])}),
+  handles:[H_('b1','i'), H_('b2','j')],
+  goal:{text:'Make the café exactly 1 + 1 block', check: s => near(add(s.b1, s.b2), [3,1]) && Math.abs(cross(s.b1, s.b2)) > .05},
+  draw(s, t){ const B = fromCols(s.b1, s.b2), ok = Math.abs(det(B)) > .02, nm = s._try ? ['b₁','b₂'] : t < 4.8 ? ['east','north'] : ['avenue','street'];
+    lines(I, C.grid0, 1, ext()); if (ok) lines(B, C.grid, 1.4, ext()*2);
+    const p = [3,1]; house(p, C.e, 'café'); house([0,0], C.fg, 'you');
+    if (ok){ const c = mul(inv(B), p), x = sc(s.b1, c[0]); arrow([0,0], x, C.i, {w:3, dash:[6,5]}); arrow(x, p, C.j, {w:3, dash:[6,5]});
+      hud([`café = ${fmt(c[0],2)} {i:${nm[0]}} + ${fmt(c[1],2)} {j:${nm[1]}}`]); } else hud(['café = ?']);
+    arr([0,0], s.b1, 'i', {w:4}); arr([0,0], s.b2, 'j', {w:4});
+    if (!s._try) beatAt(t, [[0,4,'Tourist: café = 3 east, 1 north'],[4,7,'Locals use tilted avenues'],[7,10,'Local: 1 avenue + 1 street'],[10,13,'Same place, new rulers = {e:basis}']]); }},
+matrix: {say:'How does a photo app know where every pixel goes?', dur:14, rest:5, range:2.3, ox:-.5, oy:-.5, custom:true,
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const A = keys(t, [[0,I],[3,I],[4.5,[0,-1,1,0]],[6.5,[0,-1,1,0]],[8,[1.5,.6,.3,1]],[11.5,[1.5,.6,.3,1]],[13,I]]); return {a1:[A[0],A[2]], a2:[A[1],A[3]]}; },
+  handles: colH,
+  goal:{text:'Rotate the photo a quarter turn (dashed)', check: s => near(s.a1,[0,1]) && near(s.a2,[-1,0])},
+  draw(s, t){ const A = MCOL(s); lines(I, C.grid0, 1, ext()); outline(SQ, C.muted, 1.2);
+    if (s._try){ ctx.save(); ctx.setLineDash([6,5]); outline(SQ.map(p => mul([0,-1,1,0], p)), C.e, 2); ctx.restore(); }
+    warpPhoto(A, 0, 0, 1, 1); outline(SQ.map(p => mul(A, p)), C.fg, 2);
+    arr([0,0], s.a1, 'i', {w:4.5}); arr([0,0], s.a2, 'j', {w:4.5}); tipLab('→', s.a1, 'i'); tipLab('↑', s.a2, 'j');
+    hud([['M =', mat(A)], '{i:column 1} = new →', '{j:column 2} = new ↑']);
+    if (!s._try) beatAt(t, [[0,3,'Bottom edge → and side edge ↑'],[3,6.5,'Turn them: the photo follows'],[6.5,11.5,'Every pixel rides along'],[11.5,14,'{e:Matrix} = where → and ↑ land']]); }},
+kinds: {say:'Which photo-app tools are matrices?', dur:15.6, rest:1.3, range:2.1, custom:true,
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const k = Math.min(5, Math.floor(t/2.6)), tau = t - k*2.6, u = seg(tau,.2,1)*(1 - seg(tau,1.9,2.5)); return {_M: lerpA(I, TOOLS[k][1], u), kname: TOOLS[k][0]}; },
+  handles: colH,
+  goal:{text:'Mirror it like a selfie (dashed)', check: s => near(s.a1,[-1,0]) && near(s.a2,[0,1])},
+  draw(s, t){ const M = MCOL(s); lines(I, C.grid0, 1, ext()); outline(RECT, C.muted, 1.2);
+    if (s._try){ ctx.save(); ctx.setLineDash([6,5]); outline(RECT.map(p => mul([-1,0,0,1], p)), C.e, 2); ctx.restore(); }
+    warpPhoto(M, -.8, -.5, 1.6, 1); outline(RECT.map(p => mul(M, p)), C.fg, 2);
+    hud([[s.kname ? `{e:${s.kname}}` : 'M =', mat(M)]]);
+    if (!s._try) beatAt(t, TOOLS.map((tl, k) => [k*2.6, (k + 1)*2.6, tl[2]])); }},
+compose: {say:'Two edits in a row: is that one edit? Does order matter?', dur:16, rest:7, range:2.2, custom:true,
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { let M, alt = 0; if (t < 9) M = mm(lerpA(I, SH, seg(t,4,6)), rot(Math.PI/2*seg(t,1,3))); else { M = SR; alt = seg(t,9.5,11); }
+    if (t > 14.6){ M = lerpA(SR, I, seg(t,14.6,15.8)); alt = 1 - seg(t,14.6,15.2); } return {_M:M, alt}; },
+  handles:[H_('a1','e'), H_('a2','e')],
+  goal:{text:'Pick edit B so B·(rotate) = dashed', check: s => near(s.a1,[1,0]) && near(s.a2,[1,1])},
+  draw(s, t){ const M = s._M || mm(fromCols(s.a1, s.a2), R90); lines(I, C.grid0, 1, ext()); outline(RECT, C.muted, 1.2);
+    if (s._try){ ctx.save(); ctx.setLineDash([6,5]); outline(RECT.map(p => mul(SR, p)), C.e, 2); ctx.restore(); }
+    warpPhoto(M, -.8, -.5, 1.6, 1); outline(RECT.map(p => mul(M, p)), C.fg, 2);
+    if (s.alt > 0){ const RS = mm(R90, SH); ctx.save(); ctx.globalAlpha = s.alt; ctx.setLineDash([6,5]); outline(RECT.map(p => mul(RS, p)), C.j, 2.5); ctx.restore(); lab('other order', mul(RS, [.8,.5]), 'j', {dx:10, dy:-14, size:FS()-2, alpha:s.alt}); }
+    if (s._try){ arrow([0,0], s.a1, C.e, {w:2.5, dash:[5,5]}); arrow([0,0], s.a2, C.e, {w:2.5, dash:[5,5]}); hud([[mat(fromCols(s.a1,s.a2),['e','e']), mat(R90,['fg','fg']), '=', mat(M)]]); }
+    else hud(t < 3.6 ? ['edit 1: {e:rotate}'] : t < 9.5 ? ['slant · rotate =', [mat(SH,['fg','fg']), mat(R90,['e','e']), '=', mat(SR)]] : ['{j:rotate · slant} ≠ {fg:slant · rotate}']);
+    if (!s._try) beatAt(t, [[0,3.5,'Edit 1: rotate a quarter turn'],[3.5,6.5,'Edit 2: slant it'],[6.5,9.5,'Two edits = one matrix (multiply)'],[9.5,14.6,'Other order: a different photo'],[14.6,16,'Order matters']]); }},
+inverse: {say:'What does the undo button actually do?', dur:12, rest:4, range:2.4, custom:true,
+  init:{a1:[1,0], a2:[0,1]},
+  anim: t => { const u = keys(t, [[0,0],[1.5,0],[3.5,1],[6,1],[8,0],[12,0]]); return {_M: lerpA(I, AI, u), st: t < 6 ? 0 : 1}; },
+  handles:[H_('a1','e'), H_('a2','e')],
+  goal:{text:'Build the undo: get the photo back', check: s => near(s.a1,[1,-1]) && near(s.a2,[-1,2])},
+  draw(s, t){ const M = s._M || mm(fromCols(s.a1, s.a2), AI); lines(I, C.grid0, 1, ext()); ctx.save(); ctx.setLineDash([6,5]); outline(RECT, C.e, 2); ctx.restore();
+    warpPhoto(M, -.8, -.5, 1.6, 1); outline(RECT.map(p => mul(M, p)), C.fg, 2);
+    if (s._try){ arrow([0,0], s.a1, C.e, {w:2.5, dash:[5,5]}); arrow([0,0], s.a2, C.e, {w:2.5, dash:[5,5]}); hud(['undo × edit =', [mat(fromCols(s.a1,s.a2),['e','e']), mat(AI,['fg','fg']), '=', mat(M)]]); }
+    else hud(s.st ? ['undo = {e:A⁻¹}', mat(inv(AI), ['e','e'])] : ['edit A', mat(AI)]);
+    if (!s._try) beatAt(t, [[0,1.5,'The original photo'],[1.5,6,'Apply an edit A'],[6,8.5,'Undo = the inverse edit A⁻¹'],[8.5,12,'A⁻¹ × A = no change at all']]); }},
+null: {say:'Can you tell where a balloon is from its shadow?', dur:14, rest:7.5, range:3, oy:-1.6, custom:true,
+  init:{sun:[-.17,1]}, anim: t => { const a = keys(t, [[0,100],[3,100],[6.5,153.43],[10,153.43],[12.5,100],[14,100]])*Math.PI/180; return {sun:[Math.cos(a), Math.sin(a)]}; },
+  handles:[{key:'v', get: s => sc(unit(s.sun), 3.3), set: (s, q, raw) => { s.sun = [raw[0], Math.max(.15, raw[1])]; }}],
+  goal:{text:'Move the sun so both cast one shadow', check: s => Math.abs(shX(BAL[0], s.sun) - shX(BAL[1], s.sun)) < .05},
+  draw(s, t){ poly([[-9,0],[9,0],[9,-6],[-9,-6]], C.axis, .15, null); seg2([-9,0], [9,0], C.axis, {w:2});
+    const sp = sc(unit(s.sun), 3.3); dotAt(sp, C.v, 14);
+    const xs = BAL.map(b => shX(b, s.sun)), one = Math.abs(xs[0] - xs[1]) < .05;
+    BAL.forEach((b, k) => { seg2(add(b, sc(unit(s.sun), 1.2)), [xs[k], 0], C.v, {dash:[4,5], alpha:.6}); ctx.save(); ctx.globalAlpha = .45; ctx.fillStyle = C.fg; ctx.beginPath(); ctx.ellipse(...P(xs[k], 0), 12, 4, 0, 0, 6.2832); ctx.fill(); ctx.restore();
+      seg2(b, [b[0], b[1] - .45], C.fg, {w:1}); dotAt(b, C[b[2]], 13); });
+    if (one) lab('2 balloons, 1 shadow', [xs[0], 0], 'neg', {dy:24, size:FS()-1});
+    hud([one ? '{neg:can’t tell them apart}' : 'each balloon → its own shadow']);
+    if (!s._try) beatAt(t, [[0,3,'The sun casts balloon shadows'],[3,6.5,'Each balloon → one spot'],[6.5,10,'Now both land on one spot: info lost'],[10,14,'Lost direction = {e:null space}']]); }},
+space: {say:'What happens to the space inside a box when you flatten it?', dur:12, rest:4, range:2.8, oy:-.6, custom:true, orbit:true,
+  init:{k:0, yaw:.6, pitch:.45}, anim: LB('space').anim, sliders:[{p:'k', min:0, max:2, step:.02, key:'e', label:'press'}], goal: LB('space').goal,
+  draw(s, t){ LB('space').draw(s); if (!s._try) beatAt(t, [[0,2,'A box holding 1.2 liters'],[2,4.5,'Press it into a flat sheet'],[4.5,6.5,'Volume 0: 3D became 2D'],[6.5,10,'Press again: just a stick'],[10,12,'det = how the volume changes']]); }},
+axb: {say:'5 items cost $8.50. How many apples and loaves?', dur:16, rest:13, custom:true,
+  init:{a:0, b:0, n:5, c:8.5}, tryInit:{a:0, b:0, n:6, c:10},
+  anim: t => { const g = t < 4 ? [0,0] : t < 7 ? [5,0] : t < 10 ? [1,4] : [2,3]; return {a:g[0], b:g[1]}; },
+  sliders:[{p:'a', min:0, max:6, step:1, key:'j', label:'apples'}, {p:'b', min:0, max:6, step:1, key:'v', label:'bread'}],
+  goal:{text:'Now: 6 items for $10. Find them', check: s => s.a + s.b === 6 && Math.abs(2*s.a + 1.5*s.b - 10) < 1e-9},
+  draw(s, t){ const fs = FS(), cx = W/2, items = s.a + s.b, cost = 2*s.a + 1.5*s.b, okI = items === s.n, okC = Math.abs(cost - s.c) < 1e-9;
+    pText('apples $2 · bread $1.50', cx, 20, {size:fs - 2, w:500, color:C.muted});
+    const bY = H*.2, step = Math.min(30, (W - 60)/Math.max(1, items)), x0 = cx - step*(items - 1)/2;
+    for (let i = 0; i < items; i++){ const x = x0 + i*step; i < s.a ? apple(x, bY, 10) : bread(x, bY, 9); }
+    if (!items) pText('empty basket', cx, bY, {size:fs - 1, color:C.muted, w:500});
+    [[H*.36, `items ${items}`, `need ${s.n}`, okI], [H*.46, `cost $${cost.toFixed(2)}`, `need $${s.c.toFixed(2)}`, okC]].forEach(([y, l, r, ok]) => {
+      pText(l, cx - 8, y, {align:'right', size:fs + 1}); pText(r, cx + 8, y, {align:'left', size:fs - 1, color:C.muted, w:500}); pText(ok ? '✓' : '✗', W - 24, y, {size:fs + 3, color: ok ? C.ok : C.neg}); });
+    const vy = H*.64, A = {m:[[1,2],[1,1.5]], c:['j','v'], d:2}, x = {m:[[s.a, s.b]], c:[['j','v']], d:0}, b = {m:[[s.n, s.c]], d:2};
+    const wA = matW(A, fs).w, wx = matW(x, fs).w, wb = matW(b, fs).w, tot = wA + wx + wb + fs*1.6 + 8; let xx = cx - tot/2;
+    pText('items', xx - 2, vy - fs*.68, {align:'right', size:10, w:500, color:C.muted}); pText('$', xx - 2, vy + fs*.68, {align:'right', size:10, w:500, color:C.muted});
+    drawMat(A, xx, vy, fs); xx += wA + 4; drawMat(x, xx, vy, fs); xx += wx + 4; pText('=', xx + fs*.6, vy, {size:fs + 2}); xx += fs*1.6; drawMat(b, xx, vy, fs);
+    pText('A', cx - tot/2 + wA/2, vy + fs*2.2, {size:12, color:C.muted}); pText('x', cx - tot/2 + wA + 4 + wx/2, vy + fs*2.2, {size:12, color:C.muted}); pText('b', xx + wb/2, vy + fs*2.2, {size:12, color:C.muted});
+    if (!s._try) beatAt(t, [[0,4,'5 items for $8.50. Which ones?'],[4,7,'Guess 5 apples: $10 ✗'],[7,10,'Guess 1 apple, 4 loaves: $8 ✗'],[10,13,'2 apples, 3 loaves ✓'],[13,16,'Prices × unknowns = facts: {e:Ax = b}']]); }},
+rows: {say:'Each fact is a line of possible baskets. Where do they cross?', dur:14, rest:6.5, range:3.6, ox:-2.6, oy:-2.6, custom:true,
+  init:{pb:1.5}, anim: t => ({pb: keys(t, [[0,1.5],[8,1.5],[9.5,2],[12,2],[13.5,1.5]]), l2: seg(t,3,4)}),
+  sliders:[{p:'pb', min:1, max:3, step:.05, key:'v', label:'bread $'}],
+  goal:{text:'Set the bread price so no basket fits', check: s => Math.abs(s.pb - 2) < .001},
+  draw(s, t){ plotBg('apples', 'loaves'); for (let x = 0; x <= 6; x++) for (let y = 0; y <= 6; y++) dotAt([x,y], C.axis, 2.2, .7);
+    lineEq([1,1], 5, C.i, {w:3}); const l2 = s.l2 ?? 1; lineEq([2, s.pb], 8.5, C.v, {w:3, alpha:l2});
+    lab('5 items', [0,5], 'i', {dx:40, dy:-4, size:FS()-2}); lab('$8.50', [8.5/2, 0], 'v', {dy:16, size:FS()-2, alpha:l2});
+    const x = solve2([1,1], [2, s.pb], [5, 8.5]), inPlot = x && x[0] > -1 && x[1] > -1 && x[0] < 9 && x[1] < 9;
+    if (inPlot && l2 > .5){ dotAt(x, C.fg, 7); lab(`${fmt(x[0],2)} apples, ${fmt(x[1],2)} loaves`, x, 'fg', {dy:-20, size:FS()-2}); }
+    hud(['{i:apples + loaves = 5}', `{v:2·apples + ${s.pb.toFixed(2)}·loaves = 8.5}`, x ? null : '{neg:lines never meet: no answer}']);
+    if (!s._try) beatAt(t, [[0,3,'Fact 1: 5 items. Every dot on the line fits'],[3,5.5,'Fact 2: $8.50 total'],[5.5,8,'Both true where they cross: 2, 3'],[8,11.5,'Bread at $2? Lines run parallel'],[11.5,14,'Never cross = no answer']]); }},
+elim: {say:'How do you solve it without guessing?', dur:14, rest:6, range:3.6, ox:-2.6, oy:-2.6, custom:true,
+  init:{m:0, n:0}, anim: t => ({m: keys(t, [[0,0],[2.5,0],[5,2],[13,2],[13.8,0]]), n: keys(t, [[0,0],[7.5,0],[9.5,1],[13,1],[13.8,0]])}),
+  sliders:[{p:'m', min:0, max:3, step:.1, key:'v', label:'subtract ×'}],
+  goal:{text:'Cancel apples out of the cost fact', check: s => Math.abs(s.m - 2) < .001},
+  draw(s, t){ plotBg('apples (a)', 'loaves (b)'); const r2 = [2 - s.m, 1.5 - s.m], c2 = 8.5 - 5*s.m, n = s.n || 0, r1 = add([1,1], sc(r2, 2*n)), c1 = 5 + 2*n*c2;
+    lineEq(r1, c1, C.i, {w:3}); lineEq(r2, c2, C.v, {w:3}); dotAt([2,3], C.fg, 7); lab('(2, 3)', [2,3], 'fg', {dx:30, dy:-12, size:FS()-1});
+    hud([`{i:${eqS(r1,c1)}}`, `{v:${eqS(r2,c2)}}`]);
+    if (!s._try) beatAt(t, [[0,2.5,'a = apples, b = loaves'],[2.5,5,'Cost fact − 2 × items fact'],[5,7.5,'Apples cancel: b = 3'],[7.5,10,'Cancel b the same way: a = 2'],[10,14,'Lines turn; the answer never moves']]); }},
+many: {say:'What if the second fact just repeats the first?', dur:14, rest:7, range:3.6, ox:-2.6, oy:-2.6, custom:true,
+  init:{T:8}, anim: t => ({T: keys(t, [[0,8],[3,8],[5,10],[9,10],[11,12],[13,12],[14,8]])}),
+  sliders:[{p:'T', min:6, max:14, step:.5, key:'v', label:'total $'}],
+  goal:{text:'Make infinitely many baskets fit', check: s => Math.abs(s.T - 10) < .001},
+  draw(s, t){ plotBg('apples', 'loaves'); const same = Math.abs(s.T - 10) < .001; lineEq([1,1], 5, C.i, {w:3}); lineEq([2,2], s.T, C.v, {w: same ? 8 : 3, alpha: same ? .45 : 1});
+    if (same) for (let k = 0; k <= 5; k++) dotAt([k, 5 - k], C.e, 6);
+    hud(['{i:a + b = 5}', `{v:every item $2: 2a + 2b = ${fmt(s.T,1)}}`, same ? '{e:∞ answers: same fact twice}' : '{neg:no answer: facts clash}']);
+    if (!s._try) beatAt(t, [[0,3,'Fact 2: every item $2, total $8'],[3,5,'$8 ≠ 5 × $2: clash, no answer'],[5,9,'Total $10: it repeats fact 1'],[9,11,'Any dot on the line works: ∞'],[11,14,'$12: clash again']]); }},
+orth: {say:'How much of the wind pushes the boat forward?', dur:12, rest:3, range:3.2, custom:true,
+  init:{w:[1,2]}, anim: t => { const a = 2*Math.PI*t/12 + 1; return {w:[2.4*Math.cos(a), 2.4*Math.sin(a)]}; },
+  handles:[H_('w','w')],
+  goal:{text:'Make the wind push sideways only', check: s => Math.abs(dot(s.w, [3,1])) < .06 && len(s.w) > .5},
+  draw(s, t){ const v = unit([3,1]), along = sc(v, dot(s.w, v)), side = sub(s.w, along), rt = p => [p[0]*v[0] - p[1]*v[1], p[0]*v[1] + p[1]*v[0]];
+    for (let k = -4; k <= 4; k++) for (let j = -3; j <= 3; j++) seg2([k*1.1 + (j % 2)*.5, j*1.1], [k*1.1 + (j % 2)*.5 + .35, j*1.1], C.w, {alpha:.2, w:2});
+    poly([[1.1,0],[.5,.32],[-.9,.28],[-.9,-.28],[.5,-.32]].map(rt), C.fg, .85, null); seg2(rt([1.4,0]), rt([-1.4,0]), C.muted, {dash:[3,5]});
+    arr([0,0], s.w, 'w', {w:4}); arr([0,0], along, 'e', {w:5}); arr(along, s.w, 'j', {w:3, dash:[6,5]});
+    if (len(along) > .2 && len(side) > .2) rightAngle(along, sc(along, -1), side);
+    tipLab('wind', s.w, 'w', {off:.6}); lab('push', sc(along, .5), 'e', {dy:20, size:FS()-1}); if (len(side) > .3) lab('drift', add(along, sc(side, .5)), 'j', {dx:28, size:FS()-1});
+    hud([`push {e:${fmt(dot(s.w, v), 2)}} · drift {j:${fmt(len(side), 2)}}`]);
+    if (!s._try) beatAt(t, [[0,3,'Wind blows on a sailboat'],[3,6,'Part of it pushes along the boat'],[6,9,'The rest drifts it sideways'],[9,12,'Push ⟂ drift: {e:orthogonal} parts']]); }},
+fit: {say:'Does studying more raise test scores? Find the best line.', dur:9, rest:7, range:4.2, custom:true,
+  init: LB('fit').init, anim: LB('fit').anim, handles: LB('fit').handles, goal: LB('fit').goal,
+  draw(s, t){ plotBg('hours studied', 'score'); LB('fit').draw(s); if (!s._try) beatAt(t, [[0,1,'Each dot = one student'],[1,4.5,'Try a line through them'],[4.5,6.5,'Squares = how much it misses'],[6.5,9,'Smallest total = {e:least squares}']]); }},
+pca: {say:'Can height and weight become one number without losing much?', dur:10, rest:8.5, range:4, custom:true,
+  init: LB('pca').init, anim: LB('pca').anim, handles: LB('pca').handles, goal: LB('pca').goal,
+  draw(s, t){ plotBg('height', 'weight'); LB('pca').draw(s); if (!s._try) beatAt(t, [[0,1,'Each dot = one person'],[1,4,'Turn a line through the cloud'],[4,6.5,'Catch the most spread'],[6.5,9.2,'Squash onto it: 2 numbers → 1'],[9.2,10,'= {e:PCA} compression']]); }},
+powers: {say:'Same yearly rule, over and over: boom, bust or balance?', dur:20, rest:19, custom:true,
+  init:{g:1.08}, tryInit:{g:1.05}, anim: t => ({g: t < 7 ? 1.08 : t < 13.5 ? .92 : 1}),
+  sliders:[{p:'g', min:.85, max:1.15, step:.01, key:'e', label:'growth'}],
+  goal:{text:'Make the population hold steady', check: s => Math.abs(s.g - 1) < .001},
+  draw(s, t, now){ const M = [.9,.2,.1,.8].map(x => x*s.g), fs = FS(), ps = t < 7 ? 0 : t < 13.5 ? 7 : 13.5, pl = t < 7 ? 7 : 6.5;
+    const yr = s._try ? Math.floor(now/600) % 16 : Math.floor((t - ps)/pl*15), Y = Math.min(12, yr);
+    const xs = [[30,60]]; for (let k = 0; k < 12; k++) xs.push(mul(M, xs[k])); const x = xs[Y];
+    const ty = H*.24, R = f => 8 + Math.min(52, 3.2*Math.sqrt(f));
+    pCircle(W*.28, ty, R(x[0]), C.i, {alpha:.85}); pCircle(W*.72, ty, R(x[1]), C.w, {alpha:.85});
+    pText(Math.round(x[0]), W*.28, ty, {color:C.panel}); pText(Math.round(x[1]), W*.72, ty, {color:C.panel});
+    pText('city', W*.28, ty + 66, {size:11, color:C.i}); pText('suburbs', W*.72, ty + 66, {size:11, color:C.w});
+    pArrow(W*.4, ty - 22, W*.6, ty - 22, C.fg, 2, .6); pText('10%', W/2, ty - 34, {size:10, w:500, color:C.muted}); pArrow(W*.6, ty + 22, W*.4, ty + 22, C.fg, 2, .6); pText('20%', W/2, ty + 34, {size:10, w:500, color:C.muted});
+    const cx0 = 30, cx1 = W - 16, cy1 = H - 100, cy0 = H*.5, mx = 260, X = k => cx0 + (cx1 - cx0)*k/12, Yp = v => cy1 - (cy1 - cy0)*Math.min(v, mx)/mx;
+    pLine(cx0, cy1, cx1, cy1, C.axis, 1.5); pLine(cx0, cy1, cx0, cy0, C.axis, 1.5); pText('total', cx0 + 4, cy0 - 8, {align:'left', size:10, w:500, color:C.muted}); pText(`year ${Y}`, cx1, cy1 + 14, {align:'right', size:10, w:500, color:C.muted});
+    ctx.save(); ctx.strokeStyle = C.e; ctx.lineWidth = 2.5; ctx.beginPath(); for (let k = 0; k <= Y; k++){ const v = xs[k][0] + xs[k][1]; k ? ctx.lineTo(X(k), Yp(v)) : ctx.moveTo(X(k), Yp(v)); } ctx.stroke(); ctx.restore();
+    pText(`×${s.g.toFixed(2)} / yr`, 14, 20, {align:'left', size:fs, color:C.e});
+    if (!s._try) beatAt(t, [[0,3.5,'Each year some move out, some back'],[3.5,7,'Plus ×1.08 growth: boom'],[7,13.5,'With ×0.92: it fades away'],[13.5,17,'×1.00: settles at a steady 2 : 1'],[17,20,'Biggest {e:eigenvalue}: grow, fade, hold']]); }},
+diag: {say:'Why does a stretch look simple from the right angle?', dur:14, rest:6, range:2.4, custom:true,
+  init:{l1:1, l2:1}, tryInit:{l1:2, l2:1}, anim: t => ({l1: keys(t, [[0,1],[2.5,1],[5,2],[14,2]]), l2: keys(t, [[0,1],[8,1],[10,.5],[14,.5]])}),
+  sliders:[{p:'l1', min:0, max:2.5, step:.05, key:'e', label:'along'}, {p:'l2', min:0, max:2.5, step:.05, key:'i', label:'across'}],
+  goal:{text:'Press it flat onto the grain line', check: s => Math.abs(s.l1 - 1) < .03 && Math.abs(s.l2) < .03},
+  draw(s, t){ const e1 = unit([1,1]), e2 = unit([-1,1]), Pm = fromCols(e1, e2), M = mm(mm(Pm, [s.l1,0,0,s.l2]), inv(Pm)), sq = [[-.8,-.8],[.8,-.8],[.8,.8],[-.8,.8]];
+    lines(I, C.grid0, 1, ext()); outline(sq, C.muted, 1.2); poly(sq.map(p => mul(M, p)), C.v, .35, C.v);
+    for (let k = -4; k <= 4; k++){ const d = k*.27, L = 1.131 - Math.abs(d); if (L <= 0) continue; const o = sc(e2, d); seg2(mul(M, add(o, sc(e1, -L))), mul(M, add(o, sc(e1, L))), C.v, {w:1.5}); }
+    arr([0,0], sc(e1, s.l1), 'e', {w:4}); arr([0,0], sc(e2, s.l2), 'i', {w:4});
+    lab(`grain ×${fmt(s.l1,2)}`, sc(e1, s.l1 + .4), 'e', {size:FS()-1}); lab(`across ×${fmt(s.l2,2)}`, sc(e2, Math.max(s.l2, .3) + .45), 'i', {size:FS()-1});
+    hud([['A =', mat(M, ['fg','fg'], 2)]]);
+    if (!s._try) beatAt(t, [[0,2.5,'Dough with a diagonal grain'],[2.5,5.5,'Roll it: ×2 along the grain'],[5.5,8,'The matrix numbers look messy'],[8,10.5,'Along/across grain: just stretching'],[10.5,14,'Those axes = {e:eigenvectors}']]); }},
+complex: {say:'Why do rabbit and fox numbers rise and fall in cycles?', dur:16, rest:15, range:2.4, oy:.9, custom:true,
+  init:{r:.97}, tryInit:{r:.95}, anim: t => ({r: t < 9 ? .97 : 1.02}),
+  sliders:[{p:'r', min:.9, max:1.08, step:.01, key:'e', label:'swing'}],
+  goal:{text:'Make the cycle repeat forever', check: s => Math.abs(s.r - 1) < .001},
+  draw(s, t, now){ const A = rot(.32).map(x => x*s.r), n = s._try ? Math.floor(now/110) % 60 : Math.floor(((t < 9 ? t : t - 9)/(t < 9 ? 9 : 7))*45);
+    lines(I, C.grid0, 1, ext()); axesOf(I); pText('extra rabbits →', W - 10, OY - 12, {align:'right', size:11, w:600, color:C.muted}); pText('↑ extra foxes', OX + 8, 104, {align:'left', size:11, w:600, color:C.muted});
+    const pts = powers(A, [1.6,0], n); pathPts(pts, C.e); dotAt(pts[pts.length - 1], C.fg, 7);
+    const y0 = H - 92, amp = 26, X = k => 16 + (W - 32)*k/60; ctx.save(); ctx.lineWidth = 2;
+    [[0, C.i, 'rabbits'], [1, C.j, 'foxes']].forEach(([c, col, nm], j) => { ctx.strokeStyle = col; ctx.beginPath(); pts.forEach((p, k) => { const y = y0 - clamp(p[c]/1.6, -1.6, 1.6)*amp; k ? ctx.lineTo(X(k), y) : ctx.moveTo(X(k), y); }); ctx.stroke(); pText(nm, 16 + j*70, y0 + 40, {align:'left', size:11, color:col}); });
+    ctx.restore(); pLine(16, y0, W - 16, y0, C.axis, 1);
+    pText(`|λ| = ${s.r.toFixed(2)}`, 14, 20, {align:'left', size:FS(), color:C.e});
+    if (!s._try) beatAt(t, [[0,3,'More rabbits → foxes thrive'],[3,6,'More foxes → rabbits drop… repeat'],[6,9,'|λ| = 0.97: the swings shrink'],[9,12.5,'|λ| = 1.02: the swings grow'],[12.5,16,'Cycles = {e:complex eigenvalues}']]); }},
+svd: {say:'Can every photo edit be broken into simple steps?', dur:10, rest:7, range:2.4, custom:true,
+  init: LB('svd').init, tryInit: LB('svd').tryInit, anim: LB('svd').anim, handles: LB('svd').handles, goal: LB('svd').goal,
+  draw(s, t){ const A = MCOL(s), R = [[-.9,-.56],[.9,-.56],[.9,.56],[-.9,.56]], d = svd2(A); lines(I, C.grid0, 1, ext()); outline(R, C.muted, 1.2);
+    warpPhoto(A, -.9, -.56, 1.8, 1.12); outline(R.map(p => mul(A, p)), C.fg, 2);
+    ctx.save(); ctx.beginPath(); for (let k = 0; k <= 72; k++){ const a = k/72*Math.PI*2, p = P(...mul(A, [.45*Math.cos(a), .45*Math.sin(a)])); k ? ctx.lineTo(...p) : ctx.moveTo(...p); } ctx.strokeStyle = C.e; ctx.lineWidth = 3.5; ctx.stroke(); ctx.restore();
+    if (s._try || !s.st){ arr([0,0], sc(d.u1, .45*d.s1), 'e', {w:3}); if (d.s2 > .02) arr([0,0], sc(d.u2, .45*d.s2), 'e', {w:3}); }
+    hud([s.st ? `{e:${s.st}}` : null, `stretch ×${fmt(d.s1,2)} and ×${fmt(d.s2,2)}`]);
+    if (!s._try) beatAt(t, [[0,1,'A circle printed on a photo'],[1,2.8,'Step 1: turn'],[2.8,4.8,'Step 2: stretch'],[4.8,8.5,'Step 3: turn = the whole edit'],[8.5,10,'Turn, stretch, turn = {e:SVD}']]); }},
+});
+// ---------- round 2: more insightful stories ----------
+const rgbCss = c => `rgb(${c.map(x => Math.round(255*clamp(x, 0, 1))).join(',')})`;
+function hsv(h, s, v){ const f = n => { const k = (n + h*6) % 6; return v - v*s*Math.max(0, Math.min(k, 4 - k, 1)); }; return [f(5), f(3), f(1)]; }
+function wave(x0, y0, w, h, fn, color, o = {}){ ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = o.w || 2.5; ctx.globalAlpha = o.alpha ?? 1; if (o.dash) ctx.setLineDash(o.dash); ctx.beginPath();
+  for (let i = 0; i <= 160; i++){ const x = i/160, y = y0 - fn(x)*h; i ? ctx.lineTo(x0 + x*w, y) : ctx.moveTo(x0 + x*w, y); } ctx.stroke(); ctx.restore(); }
+// SVD of the photo (per colour channel), computed once
+function jacobiEig(Ain){ const n = Ain.length, A = Ain.map(r => r.slice()), V = A.map((r, i) => r.map((_, j) => i === j ? 1 : 0));
+  for (let sw = 0; sw < 40; sw++){ let off = 0; for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++) off += A[p][q]*A[p][q]; if (off < 1e-10) break;
+    for (let p = 0; p < n; p++) for (let q = p + 1; q < n; q++){ if (Math.abs(A[p][q]) < 1e-14) continue;
+      const th = (A[q][q] - A[p][p])/(2*A[p][q]), tt = (th >= 0 ? 1 : -1)/(Math.abs(th) + Math.sqrt(th*th + 1)), c = 1/Math.sqrt(tt*tt + 1), s = tt*c;
+      for (let k = 0; k < n; k++){ const a = A[k][p], b = A[k][q]; A[k][p] = c*a - s*b; A[k][q] = s*a + c*b; }
+      for (let k = 0; k < n; k++){ const a = A[p][k], b = A[q][k]; A[p][k] = c*a - s*b; A[q][k] = s*a + c*b; }
+      for (let k = 0; k < n; k++){ const a = V[k][p], b = V[k][q]; V[k][p] = c*a - s*b; V[k][q] = s*a + c*b; } } }
+  return {vals: A.map((r, i) => r[i]), V}; }
+const SVDIMG = (() => { const d = phOrig.getContext('2d').getImageData(0, 0, PW, PH).data, ch = [0,1,2].map(c => { const X = []; for (let y = 0; y < PH; y++){ const r = []; for (let x = 0; x < PW; x++) r.push(d[(y*PW + x)*4 + c]); X.push(r); } return X; });
+  const comps = ch.map(X => { const G = X.map(ri => X.map(rj => ri.reduce((s, v, k) => s + v*rj[k], 0))), e = jacobiEig(G), ord = e.vals.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+    return ord.map(([v, i]) => { const u = X.map((_, r) => e.V[r][i]), w = Array.from({length:PW}, (_, c) => X.reduce((s, row, r) => s + u[r]*row[c], 0)); return {u, w}; }); });
+  const total = ch.reduce((s, X) => s + X.flat().reduce((a, v) => a + v*v, 0), 0), cache = {};
+  const recon = k => { if (cache[k]) return cache[k]; const img = new Uint8ClampedArray(PW*PH*4); let err = 0;
+    for (let c = 0; c < 3; c++) for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++){ let v = 0; for (let i = 0; i < k; i++) v += comps[c][i].u[y]*comps[c][i].w[x]; const o = ch[c][y][x]; err += (o - v)*(o - v); img[(y*PW + x)*4 + c] = v; }
+    for (let i = 3; i < img.length; i += 4) img[i] = 255; return (cache[k] = {img, err: Math.sqrt(err/total)}); };
+  let kOK = 1; while (kOK < 40 && recon(kOK).err >= .05) kOK++;
+  return {recon, kOK}; })();
+const svdCv = document.createElement('canvas'); svdCv.width = PW; svdCv.height = PH;
+const PR_LINKS = [[1,2],[2],[0],[2]], PR_POS = [[.27,.17],[.76,.2],[.52,.43],[.2,.6]], PR_NAMES = ['A','B','C','D'];
+const prM = d => { const M = [0,1,2,3].map(() => [0,0,0,0]); PR_LINKS.forEach((out, j) => { for (let i = 0; i < 4; i++) M[i][j] = (1 - d)/4 + (out.includes(i) ? d/out.length : 0); }); return M; };
+const prStep = (M, x) => M.map(r => r.reduce((s, v, j) => s + v*x[j], 0));
+const HOUSE = (() => { const V = [[-1,-1,0],[1,-1,0],[1,1,0],[-1,1,0],[-1,-1,1.1],[1,-1,1.1],[1,1,1.1],[-1,1,1.1],[-1,0,1.8],[1,0,1.8]];
+  return {V, F:[[[0,1,5,4],'wall'],[[1,2,6,5],'wall'],[[2,3,7,6],'wall'],[[3,0,4,7],'wall'],[[4,5,9,8],'roof'],[[7,6,9,8],'roof'],[[0,4,8,7,3],'wall0'],[[1,5,9,6,2],'wall0']],
+    door:[[-.25,-1,0],[.25,-1,0],[.25,-1,.7],[-.25,-1,.7]], win:[[1,-.4,.45],[1,.4,.45],[1,.4,.85],[1,-.4,.85]]}; })();
+const rot3 = (yaw, pitch) => { const a = yaw*Math.PI/180, b = pitch*Math.PI/180, ca = Math.cos(a), sa = Math.sin(a), cb = Math.cos(b), sb = Math.sin(b);
+  return [[ca, -sa, 0], [cb*sa, cb*ca, -sb], [sb*sa, sb*ca, cb]]; };
+const XR = {bone:[-.5,.5], yd:-1.6};
+const xShadow = (p, a) => p[0] + (p[1] - XR.yd)*Math.tan(a*Math.PI/180);
+Object.assign(STORIES, {
+svd: {say:'How can a photo file be made 5× smaller?', dur:14, rest:9, custom:true,
+  init:{k:1}, tryInit:{k:1}, anim: t => ({k: t < 3 ? 1 : t < 5 ? 2 : t < 7.5 ? 4 : t < 10 ? SVDIMG.kOK : 20}),
+  sliders:[{p:'k', min:1, max:20, step:1, key:'e', label:'patterns'}],
+  goal:{text:'Fewest patterns with under 5% error', check: s => s.k === SVDIMG.kOK},
+  draw(s, t){ const fs = FS(), r = SVDIMG.recon(s.k), iw = Math.min(W - 32, (H - 230)*PW/PH), ih = iw*PH/PW, x0 = (W - iw)/2, y0 = 62;
+    svdCv.getContext('2d').putImageData(new ImageData(r.img, PW, PH), 0, 0); ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(svdCv, x0, y0, iw, ih); ctx.restore();
+    const tw = Math.min(90, W*.24), th = tw*PH/PW; ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(phOrig, W - tw - 14, y0 + ih + 14, tw, th); ctx.restore(); pText('original', W - tw/2 - 14, y0 + ih + th + 26, {size:10, w:500, color:C.muted});
+    const kept = Math.round(100*s.k*(PW + PH + 1)/(PW*PH));
+    pText(`${s.k} pattern${s.k > 1 ? 's' : ''}`, 16, y0 + ih + 26, {align:'left', size:fs + 4, color:C.e});
+    pText(`${kept}% of the numbers`, 16, y0 + ih + 50, {align:'left', size:fs - 1, w:500}); pText(`error ${(100*r.err).toFixed(1)}%`, 16, y0 + ih + 70, {align:'left', size:fs - 1, w:500, color: r.err < .05 ? C.ok : C.neg});
+    pText('A photo = a 40 × 64 grid of numbers per color', W/2, 30, {size:11, w:500, color:C.muted});
+    if (!s._try) beatAt(t, [[0,3,'1 pattern: just soft bands'],[3,5,'2 patterns: shapes appear'],[5,7.5,'4 patterns: getting there'],[7.5,10,`${SVDIMG.kOK} patterns: under 5% error`],[10,14,'Top patterns of a grid = {e:SVD}']]); }},
+powers: {say:'How does Google decide which page matters most?', dur:16, rest:15, custom:true,
+  init:{d:.85}, sliders:[{p:'d', min:0, max:1, step:.05, key:'e', label:'click %'}],
+  goal:{text:'Make every page equally important', check: s => s.d < .001},
+  draw(s, t, now){ const fs = FS(), M = prM(s.d), n = s._try ? Math.floor(now/700) % 14 : clamp(Math.floor((t - 3)/.8), 0, 12);
+    let x = [0,0,0,1]; for (let k = 0; k < n; k++) x = prStep(M, x); let st = [.25,.25,.25,.25]; for (let k = 0; k < 200; k++) st = prStep(M, st);
+    const pos = PR_POS.map(([a, b]) => [W*a, (H - 150)*b + 30]), R = f => 14 + 34*Math.sqrt(f);
+    PR_LINKS.forEach((out, j) => out.forEach(i => { const [x1, y1] = pos[j], [x2, y2] = pos[i], L = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1)/L, uy = (y2 - y1)/L, r1 = R(x[j]) + 4, r2 = R(x[i]) + 6;
+      pArrow(x1 + ux*r1 - uy*5, y1 + uy*r1 + ux*5, x2 - ux*r2 - uy*5, y2 - uy*r2 + ux*5, C.axis, 2, .9); }));
+    pos.forEach(([px, py], i) => { pCircle(px, py, R(st[i]), null, {stroke:C.e, dash:[4,4], lw:1.5}); pCircle(px, py, R(x[i]), C.w, {alpha:.85}); pText(PR_NAMES[i], px, py - 7, {color:C.panel, size:fs + 1}); pText(`${Math.round(100*x[i])}%`, px, py + 9, {color:C.panel, size:fs - 3}); });
+    const order = [0,1,2,3].sort((a, b) => st[b] - st[a]), by = H - 118, bw = (W - 32)/4;
+    order.forEach((i, k) => { const bh = 40*st[i]/st[order[0]]; pRect(16 + k*bw + 6, by - bh, bw - 12, bh, C.e, {r:3, alpha:.8}); pText(`${k + 1}. ${PR_NAMES[i]}`, 16 + k*bw + bw/2, by + 12, {size:11}); });
+    pText(`step ${n}`, 14, 20, {align:'left', size:fs - 2, color:C.muted, w:500});
+    if (!s._try) beatAt(t, [[0,2.5,'Four web pages that link to each other'],[2.5,5,'Everyone starts on page D'],[5,9,'Each step: click a link (sometimes jump)'],[9,12,'The crowds stop changing'],[12,16,'Steady crowd = rank = {e:eigenvector}']]); }},
+span: {say:'Why do screens use three colors of light?', dur:16, rest:13, custom:true,
+  init:{set:0}, tryInit:{set:2, r:.5, g:0, b:.5}, anim: t => ({set: t < 5.5 ? 0 : t < 10 ? 1 : 2}),
+  sliders:[{p:'r', min:0, max:1, step:.05, key:'j', label:'red'}, {p:'g', min:0, max:1, step:.05, key:'i', label:'green'}, {p:'b', min:0, max:1, step:.05, key:'w', label:'blue'}],
+  goal:{text:'Mix pure yellow', check: s => s.r > .97 && s.g > .97 && s.b < .03},
+  draw(s, t){ const fs = FS(), SETS = [[[1,0,0],[0,0,1]], [[1,0,0],[.5,0,0]], [[1,0,0],[0,1,0],[0,0,1]]], Ls = SETS[s.set];
+    const lampY = 46, gap = Math.min(90, W/4); Ls.forEach((c, k) => { const x = W/2 + (k - (Ls.length - 1)/2)*gap, amt = s._try ? [s.r, s.g, s.b][k] : 1;
+      pCircle(x, lampY, 26, rgbCss(c), {alpha:.18*amt}); pCircle(x, lampY, 15, rgbCss(c.map(v => v*Math.max(.25, amt))), {stroke:C.fg, lw:1}); });
+    if (s._try){ const mix = [s.r, s.g, s.b], R = Math.min(70, H*.16); pCircle(W*.32, H*.38, R, rgbCss(mix), {stroke:C.line, lw:2}); pCircle(W*.72, H*.38, R*.7, rgbCss([1,1,0]), {stroke:C.line, lw:2});
+      pText('your mix', W*.32, H*.38 + R + 16, {size:11, w:500, color:C.muted}); pText('target', W*.72, H*.38 + R*.7 + 16, {size:11, w:500, color:C.muted}); return; }
+    const n = 8, cs = Math.min((W - 40)/n, (H - 260)/n), gx = (W - cs*n)/2, gy = 92;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++){ let c;
+      if (Ls.length === 2){ const a = i/(n - 1), b = (n - 1 - j)/(n - 1); c = [0,1,2].map(q => a*Ls[0][q] + b*Ls[1][q]); }
+      else c = hsv(i/n, 1, 1 - j/(n + 2));
+      pRect(gx + i*cs + 1, gy + j*cs + 1, cs - 2, cs - 2, rgbCss(c), {r:3}); }
+    const yy = gy + n*cs + 24, reach = Ls.length === 3; pCircle(W/2 - 40, yy, 14, rgbCss([1,1,0]), {stroke:C.line}); pText(reach ? 'yellow ✓' : 'yellow ✗', W/2 - 18, yy, {align:'left', size:fs, color: reach ? C.ok : C.neg});
+    beatAt(t, [[0,2.5,'A screen pixel mixes lights'],[2.5,5.5,'Red + blue: every mix you can make'],[5.5,8,'Red + dim red: just shades, a line'],[8,10,'Yellow can’t be made ✗'],[10,13,'Add green: every color ✓'],[13,16,'All reachable mixes = the {e:span}']]); }},
+basis: {say:'Can a whole sound be described with just two numbers?', dur:15, rest:10, custom:true,
+  init:{lo:.8, hi:.4}, tryInit:{lo:0, hi:0}, anim: t => ({show: t < 3 ? 0 : t < 6 ? 1 : t < 9 ? 2 : 3}),
+  sliders:[{p:'lo', min:-1, max:1, step:.05, key:'i', label:'low'}, {p:'hi', min:-1, max:1, step:.05, key:'j', label:'high'}],
+  goal:{text:'Match the mystery sound', check: s => Math.abs(s.lo - .6) < .03 && Math.abs(s.hi + .5) < .03},
+  draw(s, t){ const fs = FS(), sh = s._try ? 3 : s.show, lo = s.lo, hi = s.hi, x0 = 16, w = W - 32, A = Math.min(34, H*.07);
+    const tone = (a, f) => x => a*Math.sin(2*Math.PI*f*x), snd = x => lo*Math.sin(2*Math.PI*x) + hi*Math.sin(2*Math.PI*5*x), y1 = 66;
+    pText(s._try ? 'mystery sound (dashed) vs yours' : 'the sound', x0, 22, {align:'left', size:11, w:500, color:C.muted});
+    if (s._try) wave(x0, y1, w, A, x => .6*Math.sin(2*Math.PI*x) - .5*Math.sin(2*Math.PI*5*x), C.e, {dash:[6,5], w:3});
+    wave(x0, y1, w, A, snd, C.fg, {w:3});
+    if (sh === 1 || (sh >= 1 && !s._try)){ for (let i = 0; i < 32; i++){ const x = i/31; pCircle(x0 + x*w, y1 - snd(x)*A, 2.5, C.v); } if (sh === 1) pText(`[${[0,1,2,3].map(i => fmt(snd(i/31), 2)).join(', ')}, … 64 numbers]`, W/2, y1 + A + 22, {size:fs - 2, w:500, color:C.v}); }
+    if (sh >= 2){ const y2 = y1 + A*2 + 50, y3 = y2 + A*2 + 30;
+      pText(`${fmt(lo, 2)} × low tone`, x0, y2 - A - 10, {align:'left', size:fs - 1, color:C.i}); wave(x0, y2, w, A, tone(lo, 1), C.i);
+      pText(`${fmt(hi, 2)} × high tone`, x0, y3 - A - 10, {align:'left', size:fs - 1, color:C.j}); wave(x0, y3, w, A, tone(hi, 5), C.j);
+      if (sh >= 3) pText(`sound = [${fmt(lo,2)}, ${fmt(hi,2)}] in tones`, W/2, y3 + A + 26, {size:fs, color:C.e}); }
+    if (!s._try) beatAt(t, [[0,3,'A sound = a wiggly line'],[3,6,'Stored as a long list of heights'],[6,9,'It’s really 0.8 low + 0.4 high tone'],[9,12,'Same sound: 2 numbers, not 64'],[12,15,'New {e:basis} = tiny files (MP3)']]); }},
+null: {say:'Why can’t one X-ray show how deep things are?', dur:14, rest:6.5, range:2.6, oy:-.2, custom:true,
+  init:{c:[.7,1.4], a:0}, tryInit:{c:[.9,1.3], a:0},
+  anim: t => ({c: keys(t, [[0,[.7,1.4]],[5,[.7,1.4]],[6.5,[.7,-.5]],[7.5,[.7,-.5]],[9,[.7,1.4]],[14,[.7,1.4]]]), a: keys(t, [[0,0],[10,0],[11.5,25],[13.2,25],[14,0]])}),
+  handles:[H_('c','v')], sliders:[{p:'a', min:-35, max:35, step:1, key:'v', label:'tilt°'}],
+  goal:{text:'Hide the coin’s shadow inside the bone’s', check: s => Math.abs(xShadow(s.c, s.a) - xShadow(XR.bone, s.a)) < .15 && Math.abs(s.c[1] - XR.bone[1]) > .4},
+  draw(s, t){ const a = s.a, ta = Math.tan(a*Math.PI/180), d = unit([ta, -1]);
+    ctx.save(); ctx.beginPath(); ctx.ellipse(...P(0, .4), 2*S, 1.45*S, 0, 0, 6.2832); ctx.fillStyle = C.grid0; ctx.fill(); ctx.strokeStyle = C.axis; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
+    for (let x = -3; x <= 3; x += .45) seg2([x - 2.8*ta, 2.4], [x + (2.4 - XR.yd)*ta - 2.8*ta, XR.yd], C.v, {alpha:.18, dash:[3,6]});
+    pRect(...P(-2.6, XR.yd + .02), 5.2*S, .28*S, C.panel, {stroke:C.axis, r:4}); lab('detector', [2.2, XR.yd - .3], 'muted', {size:11, w:500});
+    const bs = xShadow(XR.bone, a), cs = xShadow(s.c, a), hid = Math.abs(cs - bs) < .15;
+    ctx.save(); ctx.globalAlpha = .55; ctx.fillStyle = C.fg; const [bx, by] = P(bs - .45, XR.yd - .12); ctx.fillRect(bx, by, .9*S, .2*S); ctx.beginPath(); ctx.arc(...P(cs, XR.yd - .02), 7, 0, 6.2832); ctx.fill(); ctx.restore();
+    seg2(XR.bone, [bs, XR.yd], C.fg, {dash:[3,4], alpha:.5}); seg2(s.c, [cs, XR.yd], C.v, {dash:[3,4], alpha:.8});
+    spanLine(d, C.e, {alpha: !s._try && t > 5 && t < 10 ? .55 : 0, w:2, dash:[6,6]}, s.c);
+    const [px, py] = P(XR.bone[0] - .45, XR.bone[1] + .12); pRect(px, py, .9*S, .24*S, C.fg, {r:6, alpha:.85}); lab('bone', XR.bone, 'fg', {dy:-18, size:11});
+    dotAt(s.c, C.v, 9); lab('coin', s.c, 'v', {dx:26, size:11});
+    hud([hid ? '{neg:coin hidden: depth lost}' : 'two shadows']);
+    if (!s._try) beatAt(t, [[0,3,'An X-ray shines down through a body'],[3,5,'Bone and coin each cast a shadow'],[5,8,'Slide coin along the beam: same image'],[8,10,'Lost direction = {e:null space}'],[10,14,'Tilt the beam: depth shows (CT scan)']]); }},
+space: {say:'How does a game show a 3D house on a flat screen?', dur:14, rest:5, range:2.5, oy:-.5, custom:true,
+  init:{yaw:30, pitch:15}, tryInit:{yaw:55, pitch:30},
+  anim: t => ({yaw: keys(t, [[0,30],[3,30],[7,140],[9,140],[11,0],[12.5,0],[14,30]]), pitch: keys(t, [[0,15],[9,15],[11,0],[12.5,0],[14,15]])}),
+  sliders:[{p:'yaw', min:-180, max:180, step:1, key:'i', label:'turn'}, {p:'pitch', min:-10, max:60, step:1, key:'j', label:'tilt'}],
+  goal:{text:'Turn it to face the front door head-on', check: s => Math.abs(s.yaw) < 3 && Math.abs(s.pitch) < 3},
+  draw(s, t){ const R = rot3(s.yaw, s.pitch), q = p => mul3(R, p), pr = p => { const r = q(p); return [r[0], r[2]]; };
+    ctx.save(); ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath(); for (let k = -3; k <= 3; k++){ ctx.moveTo(...P(...pr([k,-3,0]))); ctx.lineTo(...P(...pr([k,3,0]))); ctx.moveTo(...P(...pr([-3,k,0]))); ctx.lineTo(...P(...pr([3,k,0]))); } ctx.stroke(); ctx.restore();
+    const fill = {wall:C.panel, wall0:C.grid0, roof:C.j};
+    HOUSE.F.map(([f, kind]) => ({f, kind, z: f.reduce((sum, i) => sum + q(HOUSE.V[i])[1], 0)/f.length})).sort((a, b) => b.z - a.z).forEach(({f, kind}) => {
+      const pts = f.map(i => pr(HOUSE.V[i])); ctx.save(); ctx.beginPath(); pts.forEach((p, k) => k ? ctx.lineTo(...P(...p)) : ctx.moveTo(...P(...p))); ctx.closePath(); ctx.fillStyle = fill[kind]; ctx.globalAlpha = kind === 'roof' ? .9 : 1; ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = C.fg; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
+      if (f[0] === 0 && f[1] === 1 && q([0,-1,0])[1] < q([0,0,0])[1]) poly(HOUSE.door.map(pr), C.v, 1, C.fg);
+      if (f[0] === 1 && f[1] === 2 && q([1,0,0])[1] < q([0,0,0])[1]) poly(HOUSE.win.map(pr), C.w, .8, C.fg); });
+    hud(['screen = drop depth of R × point', ...R.map(r => `{muted:[ ${r.map(v => (v < 0 ? '' : ' ') + v.toFixed(2)).join(' ')} ]}`)]);
+    if (!s._try) beatAt(t, [[0,3,'A game stores a house as 3D points'],[3,7,'Turn = a 3×3 matrix × every point'],[7,9,'Then drop depth → the flat screen'],[9,12.5,'Facing it head-on: just the front'],[12.5,14,'Every frame: {e:matrix × points}']]); }},
+diag: {say:'How do you predict 100 years ahead without 100 steps?', dur:15, rest:9, range:4, ox:-3, oy:-3, custom:true,
+  init:{yr:0}, anim: t => ({yr: t < 3 ? 0 : t < 4 ? 1 : t < 5 ? 2 : t < 6 ? 3 : t < 7 ? 5 : t < 8.5 ? 10 : 100}),
+  sliders:[{p:'yr', min:0, max:100, step:1, key:'e', label:'year'}],
+  goal:{text:'First year within 1 person of steady', check: s => s.yr === 10},
+  draw(s, t){ plotBg('city (×10)', 'suburbs (×10)'); const st = [6,3], fd = k => sc([-3,3], Math.pow(.7, k)), x = add(st, fd(s.yr));
+    spanLine([2,1], C.e, {alpha:.5, dash:[6,6], w:2}); spanLine([1,-1], C.j, {alpha:.4, dash:[6,6], w:2}, st);
+    for (let k = 0; k <= Math.min(s.yr, 30); k++) dotAt(add(st, fd(k)), C.fg, 3, .35);
+    arr([0,0], st, 'e', {w:4}); if (len(fd(s.yr)) > .03) arr(st, x, 'j', {w:4}); dotAt(x, C.fg, 7);
+    lab('steady part', sc(st, .55), 'e', {dy:18, size:FS()-2}); if (s.yr < 4) lab('fading part', add(st, sc(fd(s.yr), .5)), 'j', {dx:46, size:FS()-2});
+    const f = 30*Math.pow(.7, s.yr);
+    hud([`year ${s.yr}: city ${(60 - f).toFixed(1)}, suburbs ${(30 + f).toFixed(1)}`, `{j:fading} = 30 × 0.7^${s.yr} = ${f < .01 ? f.toExponential(1) : f.toFixed(2)}`]);
+    if (!s._try) beatAt(t, [[0,3,'City 30 people, suburbs 60'],[3,6,'Split: steady part + fading part'],[6,8.5,'Each year: steady ×1, fading ×0.7'],[8.5,12,'Year 100: 0.7¹⁰⁰ ≈ 0, no 100 steps'],[12,15,'Split into eigen-parts = {e:diagonalize}']]); }},
+});
+Object.keys(STORIES).forEach(id => { LV.find(l => l.id === id).story = STORIES[id]; });
+const storyCache = {};
+function eff(lv){ if (TH !== 'real' || !lv.story) return lv;
+  return storyCache[lv.id] || (storyCache[lv.id] = Object.assign({}, lv, {M:null, custom:false, sliders:null, handles:null, tryInit:null, anim:null, ox:0, oy:0, range:5, orbit:false, ownData:false, rest:undefined, worlds:null}, lv.story, {id: lv.id + '~story', themes:['math']})); }
+const EL = () => eff(LV[cur]);
+
+
+// ---------- UI ----------
+const $ = id => document.getElementById(id);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let cur = 0, t = 0, playing = !reduce, scrubbing = false, mode = 'watch', lastOk = false;
+const tryState = {};
+let done = new Set(); try { done = new Set(JSON.parse(localStorage.getItem('lam-done') || '[]')); } catch (e) {}
+const saveDone = () => { try { localStorage.setItem('lam-done', JSON.stringify([...done])); } catch (e) {} };
+const clone = o => JSON.parse(JSON.stringify(o));
+function getState(lv){
+  if (mode === 'try'){ if (!tryState[lv.id]) tryState[lv.id] = clone(Object.assign({}, lv.init, lv.tryInit || {})); const s = tryState[lv.id]; s._try = true; return s; }
+  const s = Object.assign(clone(lv.init), lv.anim ? lv.anim(t) : {}); s._try = false; return s;
+}
+const htmlOf = s => parse(s).map(x => x.k ? `<b style="color:var(--${x.k === 'neg' ? 'j' : x.k === 'pos' ? 'i' : x.k})">${x.t}</b>` : x.t).join('');
+function renderTabs(){ $('tabs').innerHTML = DEMOS.map((d, k) => { const ls = LV.filter(l => l.demo === k), n = ls.filter(l => done.has(l.id)).length;
+  return `<button class="tab" data-d="${k}" aria-current="${LV[cur].demo === k}">${d}<small>${n}/${ls.length}</small></button>`; }).join('');
+  $('count').textContent = `${[...done].filter(id => !id.includes('~')).length} / ${LV.length}`; }
+function renderChips(){ const d = LV[cur].demo; $('chips').innerHTML = LV.map((l, k) => l.demo !== d ? '' :
+  `<button class="chip${done.has(l.id) ? ' done' : ''}" data-k="${k}" aria-current="${k === cur}"><i></i>${l.name}</button>`).join('');
+  const c = $('chips').querySelector('[aria-current="true"]'); if (c) c.scrollIntoView({block:'nearest', inline:'nearest'}); }
+const curWorld = () => null;
+function renderSay(){ const lv = LV[cur], story = TH === 'real' && lv.story, th = lv.themes.includes(TH) ? TH : 'math';
+  $('say').textContent = story ? lv.story.say : TH === 'real' ? 'Stories so far:' : (th !== 'math' && lv.cap[th]) || lv.say;
+  document.querySelectorAll('#themes button').forEach(b => { b.disabled = b.dataset.th === 'real' ? false : !lv.themes.includes(b.dataset.th); b.setAttribute('aria-pressed', b.dataset.th === TH); });
+  const wb = $('worlds'); wb.hidden = !(TH === 'real' && !lv.story);
+  wb.innerHTML = TH === 'real' && !lv.story ? LV.map((l, k) => l.story ? `<button data-go="${k}">${l.name} \u203a</button>` : '').join('') : ''; }
+function renderGoal(ok){ const lv = EL(), g = $('goal');
+  g.classList.toggle('ok', !!ok && mode === 'try');
+  g.innerHTML = mode === 'watch' ? `<span class="ic"></span><span>${htmlOf(lv.goal.text)}</span><span class="go">Try ›</span>`
+    : `<span class="ic">${ok ? '✓' : ''}</span><span>${htmlOf(lv.goal.text)}</span>${ok ? '<span class="go" style="color:var(--ok)">Next ›</span>' : ''}`;
+  $('next').classList.toggle('pulse', !!ok && mode === 'try'); }
+function renderSliders(){ const lv = EL(), box = $('sliders'); box.innerHTML = '';
+  if (mode !== 'try' || !lv.sliders) return; const s = getState(lv);
+  lv.sliders.forEach(sl => { const row = document.createElement('div'); row.className = 'sl'; const id = `sl-${lv.id}-${sl.p}`;
+    row.innerHTML = `<label for="${id}" style="color:var(--${sl.key})">${sl.label || sl.p}</label><input type="range" id="${id}" min="${sl.min}" max="${sl.max}" step="${sl.step}" value="${s[sl.p]}" style="accent-color:var(--${sl.key})"><output>${(+s[sl.p]).toFixed(2)}</output>`;
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => { s[sl.p] = +inp.value; out.textContent = (+inp.value).toFixed(2); }); box.appendChild(row); }); }
+function renderControls(){ const w = mode === 'watch';
+  $('mWatch').setAttribute('aria-pressed', w); $('mTry').setAttribute('aria-pressed', !w);
+  $('play').hidden = !w; $('scrub').hidden = !w; $('spacer').hidden = w; $('reset').hidden = w; setIcon(); }
+function setIcon(){ $('playIcon').innerHTML = playing ? '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>' : '<path d="M8 5v14l11-7z"/>'; $('play').setAttribute('aria-label', playing ? 'Pause' : 'Play'); }
+function go(k, keepMode){
+  cur = (k + LV.length) % LV.length; const lv = EL();
+  if (!keepMode) mode = 'watch';
+  t = (!playing || keepMode === 'rest') ? (lv.rest ?? lv.dur/2) : 0; lastOk = false;
+  renderTabs(); renderChips(); renderSay(); renderGoal(false); renderSliders(); renderControls();
+  cv.classList.remove('swap'); void cv.offsetWidth; cv.classList.add('swap');
+  try { history.replaceState(null, '', '#' + LV[cur].id); } catch (e) {}
+}
+function setMode(m){ mode = m; lastOk = false; if (m === 'watch') t = 0; renderGoal(false); renderSliders(); renderControls(); }
+$('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) go(LV.findIndex(l => l.demo === +b.dataset.d)); });
+$('chips').addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) go(+b.dataset.k); });
+$('themes').addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; const before = EL(); TH = b.dataset.th; renderSay(); if (EL() !== before){ lastOk = false; t = 0; renderGoal(false); renderSliders(); } });
+$('worlds').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.go) go(+b.dataset.go); });
+$('goal').addEventListener('click', () => { if (mode === 'watch') setMode('try'); else if (lastOk) go(cur + 1); });
+$('mWatch').onclick = () => setMode('watch'); $('mTry').onclick = () => setMode('try');
+$('play').onclick = () => { playing = !playing; setIcon(); };
+$('reset').onclick = () => { delete tryState[EL().id]; lastOk = false; renderGoal(false); renderSliders(); };
+$('prev').onclick = () => go(cur - 1); $('next').onclick = () => go(cur + 1);
+$('scrub').addEventListener('input', () => { scrubbing = true; t = $('scrub').value/1000*EL().dur; });
+$('scrub').addEventListener('change', () => { scrubbing = false; });
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') go(cur + 1); else if (e.key === 'ArrowLeft') go(cur - 1);
+  else if (e.key === ' ' && mode === 'watch'){ e.preventDefault(); playing = !playing; setIcon(); } });
+const fromHash = () => { const k = LV.findIndex(l => '#' + l.id === location.hash); return k < 0 ? 0 : k; };
+addEventListener('hashchange', () => { const k = fromHash(); if (k !== cur) go(k); });
+
+// dragging
+const toWorld = (px, py) => [(px - OX)/S, (OY - py)/S];
+const snapV = p => p.map(x => { const h = Math.round(x*2)/2; return Math.abs(x - h) < .12 ? h : Math.round(x*10)/10; });
+let drag = null;
+cv.addEventListener('pointerdown', e => {
+  const lv = EL(); if (mode !== 'try') return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left - MB.x, y = e.clientY - r.top - MB.y, s = getState(lv);
+  let best = null, bd = 32; (lv.handles || []).forEach((h, k) => { const q = P(...h.get(s)), d = Math.hypot(q[0]-x, q[1]-y); if (d < bd){ bd = d; best = k; } });
+  if (best !== null) drag = {k:best}; else if (lv.orbit) drag = {orbit:true, x, y, yaw:s.yaw, pitch:s.pitch};
+  if (drag) cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag) return; const lv = EL(), s = getState(lv), r = cv.getBoundingClientRect(), x = e.clientX - r.left - MB.x, y = e.clientY - r.top - MB.y;
+  if (drag.orbit){ s.yaw = drag.yaw + (x - drag.x)*.01; s.pitch = clamp(drag.pitch + (y - drag.y)*.01, -.2, 1.4); return; }
+  const raw = toWorld(x, y); lv.handles[drag.k].set(s, snapV(raw), raw);
+});
+const endDrag = () => { drag = null; };
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.05, (now - last)/1000); last = now; const lv = EL();
+  if (mode === 'watch' && playing && !scrubbing){ t += dt*(lv.id.includes('~') ? .6 : 1); if (t > lv.dur) t -= lv.dur; }
+  if (mode === 'watch' && !scrubbing) $('scrub').value = Math.round(t/lv.dur*1000);
+  const saveTH = TH, real = TH === 'real' && lv.worlds; if (!lv.themes.includes(TH)) TH = 'math';
+  let mb = {x:0, y:0, w:CW, h:CH}, sb = null;
+  if (real){ if (CH > CW*1.05){ const hm = Math.round(CH*.45); mb = {x:0, y:0, w:CW, h:hm}; sb = {x:0, y:hm, w:CW, h:CH - hm}; }
+    else { const wm = Math.round(CW*.5); mb = {x:0, y:0, w:wm, h:CH}; sb = {x:wm, y:0, w:CW - wm, h:CH}; } }
+  MB = mb; W = mb.w; H = mb.h;
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.fillStyle = C.panel; ctx.fillRect(0,0,CW,CH);
+  ctx.save(); ctx.beginPath(); ctx.rect(mb.x, mb.y, mb.w, mb.h); ctx.clip(); ctx.translate(mb.x, mb.y);
+  S = Math.min(W, H)/(2*(lv.range || 5)); OX = W/2 + (lv.ox || 0)*S; OY = H/2 - (lv.oy || 0)*S;
+  try {
+    const s = getState(lv), A = lv.M ? lv.M(s) : null;
+    if (sb){ ctx.restore(); ctx.save(); ctx.beginPath(); ctx.rect(sb.x, sb.y, sb.w, sb.h); ctx.clip(); ctx.translate(sb.x, sb.y);
+      ctx.fillStyle = C.bg; ctx.fillRect(0, 0, sb.w, sb.h); const wd = curWorld(lv); wd.draw(s, now, sb.w, sb.h, dt);
+      ctx.restore(); ctx.save(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.5; ctx.beginPath(); if (sb.y){ ctx.moveTo(0, sb.y); ctx.lineTo(CW, sb.y); } else { ctx.moveTo(sb.x, 0); ctx.lineTo(sb.x, CH); } ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(mb.x, mb.y, mb.w, mb.h); ctx.clip(); ctx.translate(mb.x, mb.y); }
+    if (!lv.custom) bg(A, lv);
+    if (mode === 'try'){ if (lv.goal.ghost) lines(lv.goal.ghost, C.e, 1.3, ext(), .45, false, [5,5]); if (lv.goal.target) targetMark(lv.goal.target, now); }
+    lv.draw(s, t, now);
+    if (mode === 'try') (lv.handles || []).forEach(h => { const q = P(...h.get(s)); ctx.save(); ctx.fillStyle = C.panel; ctx.strokeStyle = C[h.key]; ctx.lineWidth = 3; ctx.globalAlpha = .95;
+      ctx.beginPath(); ctx.arc(q[0], q[1], 11, 0, 6.2832); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(q[0], q[1], 3.5, 0, 6.2832); ctx.fillStyle = C[h.key]; ctx.fill(); ctx.restore(); });
+    if (TH === 'color' && A) photo(A);
+    if (mode === 'try'){ const ok = !!lv.goal.check(s); if (ok !== lastOk){ lastOk = ok; renderGoal(ok); if (ok && !done.has(lv.id)){ done.add(lv.id); saveDone(); renderTabs(); renderChips(); } } }
+  } catch (err) { console.error(err); }
+  ctx.restore(); TH = saveTH;
+  requestAnimationFrame(frame);
+}
+go(fromHash(), 'rest'); requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
