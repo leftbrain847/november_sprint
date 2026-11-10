@@ -1,0 +1,442 @@
+<meta name="robots" content="noindex,nofollow"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>11/02/2026 - Spatial Puzzles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="vendor/fonts/fonts-spatial-puzzles.css">
+<style>
+/* Layout: one full-bleed stage; quiet type pinned to the four corners, nothing in the middle but the object. */
+:root{
+  --bg:#E4E6E8; --bg-lift:#F1F2F3; --ink:#1D2024; --mute:#767C84; --line:rgba(29,32,36,.16); --accent:#8E7149;
+  --plinth:#DADCDF;
+  --display:"Instrument Serif","Iowan Old Style",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#131518; --bg-lift:#1D2024; --ink:#E6E3DE; --mute:#8B9199; --line:rgba(230,227,222,.16); --accent:#C8A674;
+  --plinth:#23272C; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#131518; --bg-lift:#1D2024; --ink:#E6E3DE; --mute:#8B9199; --line:rgba(230,227,222,.16); --accent:#C8A674;
+  --plinth:#23272C; color-scheme:dark }
+
+html,body{height:100%}
+body{margin:0;overflow:hidden;background-color:var(--bg);
+  background-image:radial-gradient(110% 80% at 50% 42%,var(--bg-lift),var(--bg) 70%);
+  color:var(--ink);font-family:var(--mono);-webkit-font-smoothing:antialiased;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#stage:active{cursor:grabbing}
+
+.hud{position:fixed;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;pointer-events:none;
+  padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.hud.top{top:0;padding-top:calc(18px + env(safe-area-inset-top,0px))}
+.hud.bottom{bottom:0;align-items:flex-end;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+.hud > *{pointer-events:auto}
+
+.lvl{display:flex;align-items:baseline;gap:12px}
+.lvl .num{font-family:var(--display);font-style:italic;font-size:44px;line-height:.9;color:var(--accent)}
+.lvl .name{font-family:var(--display);font-size:22px;line-height:1}
+.label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.score{text-align:right;display:grid;gap:4px;font-variant-numeric:tabular-nums}
+.score .val{font-family:var(--display);font-size:30px;line-height:.9}
+.score .par{font-size:11px;color:var(--mute);letter-spacing:.06em}
+
+.hint{pointer-events:none;font-size:11px;line-height:1.6;color:var(--mute);max-width:24ch;letter-spacing:.02em;transition:opacity .6s}
+.controls{display:flex;align-items:center;gap:18px}
+.dots{display:flex;gap:10px}
+.dot{width:26px;height:26px;padding:0;border:0;background:none;display:grid;place-items:center;cursor:pointer;border-radius:50%}
+.dot::after{content:"";width:6px;height:6px;border-radius:50%;border:1px solid var(--mute);transition:all .3s}
+.dot[aria-current="true"]::after{background:var(--ink);border-color:var(--ink);transform:scale(1.15)}
+.dot.done::after{background:var(--accent);border-color:var(--accent)}
+.btn{font:inherit;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);background:none;
+  border:1px solid var(--line);border-radius:999px;padding:9px 14px;cursor:pointer;transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--ink)}
+.btn:focus-visible,.dot:focus-visible{outline:1px solid var(--accent);outline-offset:3px}
+
+.veil{position:fixed;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none;opacity:0;transition:opacity .9s ease}
+.veil.show{opacity:1;pointer-events:auto}
+.veil .inner{display:grid;gap:14px;justify-items:center;padding:24px;transform:translateY(8px);transition:transform .9s ease}
+.veil.show .inner{transform:none}
+.veil h2{margin:0;font-family:var(--display);font-weight:400;font-style:italic;font-size:clamp(44px,12vw,72px);line-height:1;text-wrap:balance}
+.veil p{margin:0 0 6px;font-size:12px;color:var(--mute);letter-spacing:.04em;max-width:32ch;line-height:1.6}
+
+@media (max-width:420px){ .hint{max-width:18ch} .lvl .num{font-size:38px} }
+@media (prefers-reduced-motion: reduce){ .veil,.veil .inner,.dot::after{transition:none} }
+</style>
+
+<canvas id="stage" aria-label="Puzzle stage. Drag to turn, tap a piece to slide it free."></canvas>
+
+<header class="hud top">
+  <div class="lvl"><span class="num" id="lvlNum">I</span><span class="name" id="lvlName">Collar</span></div>
+  <div class="score">
+    <span class="label">Moves</span>
+    <span class="val" id="moves">0</span>
+    <span class="par" id="par">par 3</span>
+  </div>
+</header>
+
+<footer class="hud bottom">
+  <p class="hint" id="hint">Turn it over before you touch it. Tap a piece to slide it free.</p>
+  <div class="controls">
+    <nav class="dots" id="dots" aria-label="Puzzles"></nav>
+    <button class="btn" id="reset" type="button">Reset</button>
+  </div>
+</footer>
+
+<div class="veil" id="veil" role="dialog" aria-live="polite">
+  <div class="inner">
+    <h2 id="veilTitle">Solved.</h2>
+    <p id="veilText"></p>
+    <button class="btn" id="veilBtn" type="button">Next puzzle</button>
+  </div>
+</div>
+
+<script src="vendor/three/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = id => document.getElementById(id);
+
+/* ---------- Puzzles ----------
+   Every piece slides out along one direction. It is held while any piece in
+   `blockers` is still in place. Pins exit toward their head (the head cannot
+   pass through the eyelets that hold them). */
+const Y_TOP = -0.94; // top of the plinth
+const LEVELS = [
+  { num:"I", name:"Collar", view:0.55,
+    pieces:[
+      { id:"pin",  kind:"pin",  axis:"x", at:[0,0.35,0], len:1.6, head:-1, mat:"brass", posts:[-0.62,0.62], blockers:[] },
+      { id:"pipe", kind:"pipe", mat:"graphite", blockers:["pin"] },
+      { id:"ring", kind:"ring", y:Y_TOP+0.07, mat:"porcelain", blockers:["pipe"] }
+    ]},
+  { num:"II", name:"Crossbar", view:-1.25,
+    pieces:[
+      { id:"a",    kind:"pin",  axis:"x", at:[0,0.35,0], len:1.6, head:1, mat:"brass", posts:[-0.62,0.62], blockers:["b"] },
+      { id:"b",    kind:"pin",  axis:"z", at:[1.06,0.35,0], len:1.2, head:1, mat:"porcelain", posts:[-0.4,0.4], blockers:[] },
+      { id:"pipe", kind:"pipe", mat:"graphite", blockers:["a"] },
+      { id:"ring", kind:"ring", y:Y_TOP+0.07, mat:"brass", blockers:["pipe"] }
+    ]},
+  { num:"III", name:"Lattice", view:-2.3,
+    pieces:[
+      { id:"a",    kind:"pin",  axis:"x", at:[0,0.5,0], len:1.6, head:1, mat:"brass", posts:[-0.62,0.62], blockers:["c"] },
+      { id:"b",    kind:"pin",  axis:"z", at:[0,0.02,0], len:1.6, head:-1, mat:"porcelain", posts:[-0.62,0.62], blockers:["d"] },
+      { id:"c",    kind:"pin",  axis:"z", at:[1.06,0.5,0], len:1.2, head:-1, mat:"graphite", posts:[-0.4,0.4], blockers:[] },
+      { id:"d",    kind:"pin",  axis:"x", at:[0,0.02,-1.06], len:1.2, head:1, mat:"brass", posts:[-0.4,0.4], blockers:[] },
+      { id:"pipe", kind:"pipe", mat:"graphite", blockers:["a","b"] },
+      { id:"ring", kind:"ring", y:Y_TOP+0.07, mat:"porcelain", blockers:["pipe"] }
+    ]}
+];
+
+/* ---------- Renderer ---------- */
+const canvas = $("stage");
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+
+// Soft studio reflections: a dim room with a few large light panels.
+(function(){
+  const pm = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(20,32,16), new THREE.MeshBasicMaterial({color:0x2c2f34, side:THREE.BackSide})));
+  const panel = (w,h,p,v) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color:new THREE.Color(v,v,v), side:THREE.DoubleSide})); m.position.set(p[0],p[1],p[2]); m.lookAt(0,0,0); env.add(m); };
+  panel(12,8,[0,13,3],3.2); panel(6,12,[-13,3,3],1.7); panel(6,8,[11,2,-8],1.1); panel(24,2.5,[0,-5,12],0.6);
+  scene.environment = pm.fromScene(env, 0.04).texture;
+  pm.dispose();
+})();
+
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(2.2, 6, 3);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, {left:-2.6,right:2.6,top:2.6,bottom:-2.6,near:1,far:15});
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 5;
+scene.add(key);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f96, 0.25));
+
+const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+const MATS = {
+  porcelain: () => new THREE.MeshPhysicalMaterial({color:lin("#ECE9E4"), roughness:0.42, metalness:0, clearcoat:0.7, clearcoatRoughness:0.25}),
+  graphite:  () => new THREE.MeshPhysicalMaterial({color:lin("#2A2D32"), roughness:0.34, metalness:0.25, clearcoat:0.5, clearcoatRoughness:0.3}),
+  brass:     () => new THREE.MeshPhysicalMaterial({color:lin("#B8996A"), roughness:0.3, metalness:1}),
+  post:      () => new THREE.MeshStandardMaterial({color:lin("#A9ADB2"), roughness:0.55, metalness:0.6})
+};
+
+// Plinth and floor shadow
+const plinthMat = new THREE.MeshStandardMaterial({roughness:0.9, metalness:0});
+const plinth = new THREE.Mesh(new THREE.CylinderGeometry(1.55, 1.58, 0.08, 120), plinthMat);
+plinth.position.y = Y_TOP - 0.04; plinth.receiveShadow = true; scene.add(plinth);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(14,14), new THREE.ShadowMaterial({opacity:0.12}));
+floor.rotation.x = -Math.PI/2; floor.position.y = Y_TOP - 0.081; floor.receiveShadow = true; scene.add(floor);
+function syncTheme(){
+  const c = getComputedStyle(document.documentElement).getPropertyValue("--plinth").trim() || "#DADCDF";
+  plinthMat.color = lin(c);
+}
+syncTheme();
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", syncTheme);
+new MutationObserver(syncTheme).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+
+/* ---------- Geometry builders ---------- */
+function shade(m){ m.castShadow = true; m.receiveShadow = true; return m; }
+
+function buildPipe(mat){
+  const g = new THREE.Group();
+  const top = 0.92;
+  const prof = [[0.155,top+0.05],[0.155,Y_TOP+0.002],[0.2,Y_TOP+0.002],[0.2,top],[0.35,top],[0.375,top+0.012],[0.38,top+0.03],[0.37,top+0.045],[0.35,top+0.05],[0.155,top+0.05]]
+    .map(p => new THREE.Vector2(p[0], p[1]));
+  const m = shade(new THREE.Mesh(new THREE.LatheGeometry(prof, 96), mat));
+  mat.side = THREE.DoubleSide;
+  g.add(m);
+  return {group:g, exit:new THREE.Vector3(0,1,0)};
+}
+
+function buildRing(p, mat){
+  const R = p.R || 0.34, r = p.r || 0.07;
+  const m = shade(new THREE.Mesh(new THREE.TorusGeometry(R, r, 40, 120), mat));
+  const g = new THREE.Group(); g.add(m);
+  m.rotation.x = Math.PI/2; g.position.y = p.y;
+  return {group:g, exit:new THREE.Vector3(0,1,0)};
+}
+
+function buildPin(p, mat, statics){
+  const g = new THREE.Group();
+  const shaft = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,p.len,40), mat));
+  const head = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.07,48), mat));
+  head.position.y = p.head * (p.len/2 + 0.035);
+  const bevel = shade(new THREE.Mesh(new THREE.TorusGeometry(0.085,0.016,16,48), mat));
+  bevel.rotation.x = Math.PI/2; bevel.position.y = p.head * (p.len/2 + 0.07);
+  const tip = shade(new THREE.Mesh(new THREE.SphereGeometry(0.05,32,16), mat));
+  tip.position.y = -p.head * p.len/2;
+  const inner = new THREE.Group(); inner.add(shaft, head, bevel, tip);
+  if (p.axis === "x") inner.rotation.z = -Math.PI/2; else inner.rotation.x = Math.PI/2;
+  g.add(inner);
+  g.position.set(...p.at);
+
+  // Fixed posts with eyelets that cradle the pin
+  const pm = MATS.post();
+  (p.posts||[]).forEach(o => {
+    const pos = new THREE.Vector3(...p.at);
+    if (p.axis === "x") pos.x += o; else pos.z += o;
+    const h = pos.y - 0.08 - Y_TOP;
+    const post = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.03,h,24), pm));
+    post.position.set(pos.x, Y_TOP + h/2, pos.z);
+    const eye = shade(new THREE.Mesh(new THREE.TorusGeometry(0.075,0.022,16,48), pm));
+    eye.position.copy(pos);
+    if (p.axis === "x") eye.rotation.y = Math.PI/2;
+    const foot = shade(new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.08,0.02,32), pm));
+    foot.position.set(pos.x, Y_TOP + 0.01, pos.z);
+    statics.add(post, eye, foot);
+  });
+  // direction mapping: inner local +y maps to +x (rotation.z = -90deg) or +z (rotation.x = 90deg)
+  const dir = p.axis === "x" ? new THREE.Vector3(p.head,0,0) : new THREE.Vector3(0,0,p.head);
+  return {group:g, exit:dir};
+}
+
+/* ---------- State ---------- */
+let levelIdx = 0, pieces = [], world = null, moves = 0, solved = false;
+const done = new Set(loadDone());
+function loadDone(){ try { return JSON.parse(localStorage.getItem("p3d-done")||"[]"); } catch(e){ return []; } }
+function saveDone(){ try { localStorage.setItem("p3d-done", JSON.stringify([...done])); } catch(e){} }
+function loadBest(i){ try { return +localStorage.getItem("p3d-best-"+i) || 0; } catch(e){ return 0; } }
+function saveBest(i,v){ try { localStorage.setItem("p3d-best-"+i, String(v)); } catch(e){} }
+
+function buildLevel(i){
+  if (world){ scene.remove(world); world.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+  levelIdx = i; moves = 0; solved = false;
+  world = new THREE.Group(); scene.add(world);
+  const statics = new THREE.Group(); world.add(statics);
+  const L = LEVELS[i];
+  pieces = L.pieces.map(p => {
+    const mat = MATS[p.mat]();
+    const b = p.kind === "pipe" ? buildPipe(mat) : p.kind === "ring" ? buildRing(p, mat) : buildPin(p, mat, statics);
+    const piece = {def:p, group:b.group, exit:b.exit, mat, home:b.group.position.clone(), removed:false, moving:false, glow:0};
+    b.group.traverse(o => { if (o.isMesh) o.userData.piece = piece; });
+    world.add(b.group);
+    return piece;
+  });
+  $("lvlNum").textContent = L.num;
+  $("lvlName").textContent = L.name;
+  $("par").textContent = "par " + L.pieces.length + (loadBest(i) ? "  ·  best " + loadBest(i) : "");
+  updateMoves();
+  renderDots();
+  orbit.targetTheta = L.view; if (!orbit.touched) orbit.theta = L.view;
+  orbit.phi = orbit.targetPhi = 1.12;
+  hideVeil();
+}
+
+function updateMoves(){ $("moves").textContent = moves; }
+
+function renderDots(){
+  const nav = $("dots"); nav.textContent = "";
+  LEVELS.forEach((L,i) => {
+    const b = document.createElement("button");
+    b.className = "dot" + (done.has(i) ? " done" : "");
+    b.type = "button"; b.setAttribute("aria-label", "Puzzle " + L.num + ", " + L.name);
+    b.setAttribute("aria-current", i === levelIdx ? "true" : "false");
+    b.addEventListener("click", () => buildLevel(i));
+    nav.appendChild(b);
+  });
+}
+
+/* ---------- Tweens ---------- */
+const tweens = [];
+const ease = {
+  io: k => k<.5 ? 4*k*k*k : 1-Math.pow(-2*k+2,3)/2,
+  in: k => k*k*k,
+  out: k => 1-Math.pow(1-k,3)
+};
+function tween(dur, fn, e){ return new Promise(res => tweens.push({t0:performance.now(), dur:reduce?Math.min(dur,250):dur, fn, e:e||ease.io, res})); }
+
+/* ---------- Moves ---------- */
+async function tryMove(piece){
+  if (solved || piece.removed || piece.moving) return;
+  moves++; updateMoves();
+  $("hint").style.opacity = "0";
+  const holding = piece.def.blockers.map(id => pieces.find(p => p.def.id === id)).filter(p => p && !p.removed);
+  piece.moving = true;
+  const from = piece.home.clone();
+  if (holding.length){
+    holding.forEach(h => h.glow = 1);
+    const d = piece.exit.clone().multiplyScalar(0.07);
+    await tween(160, k => piece.group.position.copy(from).addScaledVector(d, k), ease.out);
+    await tween(420, k => {
+      const s = 1 - k, w = Math.sin(k*Math.PI*3) * 0.25 * (1-k);
+      piece.group.position.copy(from).addScaledVector(d, s + w*s);
+    }, ease.out);
+    piece.group.position.copy(from);
+    piece.moving = false;
+    return;
+  }
+  piece.removed = true;
+  piece.mat.transparent = true;
+  const dist = 3.4;
+  await tween(1100, k => {
+    piece.group.position.copy(from).addScaledVector(piece.exit, dist*k);
+    piece.mat.opacity = k < .45 ? 1 : 1 - (k-.45)/.55;
+  }, ease.io);
+  piece.group.visible = false;
+  piece.moving = false;
+  if (pieces.every(p => p.removed)) finish();
+}
+
+function finish(){
+  solved = true;
+  const par = LEVELS[levelIdx].pieces.length;
+  done.add(levelIdx); saveDone(); renderDots();
+  const best = loadBest(levelIdx);
+  if (!best || moves < best) saveBest(levelIdx, moves);
+  const last = levelIdx === LEVELS.length - 1;
+  $("veilTitle").textContent = moves === par ? "Clean." : "Solved.";
+  $("veilText").textContent = moves === par
+    ? par + " moves, none wasted. You saw it before you touched it."
+    : moves + " moves. It comes apart in " + par + ".";
+  $("veilBtn").textContent = last ? "Start over" : "Next puzzle";
+  $("veilBtn").onclick = () => buildLevel(last ? 0 : levelIdx + 1);
+  setTimeout(() => { $("veil").classList.add("show"); $("veilBtn").focus({preventScroll:true}); }, 350);
+}
+function hideVeil(){ $("veil").classList.remove("show"); }
+
+$("reset").addEventListener("click", () => buildLevel(levelIdx));
+
+/* ---------- Orbit + tap ---------- */
+const orbit = {theta:0, phi:1.12, r:6, targetTheta:0, targetPhi:1.12, zoom:1, vt:0, vp:0, touched:false};
+const ptrs = new Map();
+let pinch0 = 0, zoom0 = 1, down = null;
+
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  orbit.touched = true;
+  if (ptrs.size === 1) down = {x:e.clientX, y:e.clientY, t:performance.now(), moved:0};
+  if (ptrs.size === 2){ const [a,b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x-b.x, a.y-b.y); zoom0 = orbit.zoom; down = null; }
+});
+canvas.addEventListener("pointermove", e => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (ptrs.size === 1){
+    if (down) down.moved += Math.abs(dx) + Math.abs(dy);
+    const s = 0.0085;
+    orbit.targetTheta -= dx * s; orbit.targetPhi -= dy * s;
+    orbit.targetPhi = Math.max(0.3, Math.min(1.62, orbit.targetPhi));
+  } else if (ptrs.size === 2){
+    const [a,b] = [...ptrs.values()];
+    const d = Math.hypot(a.x-b.x, a.y-b.y);
+    if (pinch0) orbit.zoom = Math.max(0.65, Math.min(1.5, zoom0 * pinch0 / d));
+  }
+});
+function endPtr(e){
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (down && ptrs.size === 0 && down.moved < 8 && performance.now() - down.t < 500) tap(e.clientX, e.clientY);
+  if (ptrs.size === 0) down = null;
+}
+canvas.addEventListener("pointerup", endPtr);
+canvas.addEventListener("pointercancel", e => { ptrs.delete(e.pointerId); down = null; });
+canvas.addEventListener("wheel", e => { e.preventDefault(); orbit.zoom = Math.max(0.65, Math.min(1.5, orbit.zoom * (1 + e.deltaY*0.001))); }, {passive:false});
+
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function tap(x, y){
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((x - r.left)/r.width)*2 - 1, -((y - r.top)/r.height)*2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const targets = []; pieces.forEach(p => { if (!p.removed) p.group.traverse(o => { if (o.isMesh) targets.push(o); }); });
+  const hit = ray.intersectObjects(targets, false)[0];
+  if (hit) tryMove(hit.object.userData.piece);
+}
+
+// Keyboard: arrows turn the view
+addEventListener("keydown", e => {
+  const k = {ArrowLeft:[0.25,0], ArrowRight:[-0.25,0], ArrowUp:[0,0.15], ArrowDown:[0,-0.15]}[e.key];
+  if (!k) return;
+  orbit.touched = true; orbit.targetTheta += k[0];
+  orbit.targetPhi = Math.max(0.3, Math.min(1.62, orbit.targetPhi + k[1]));
+});
+
+/* ---------- Loop ---------- */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  const half = camera.aspect < 0.8 ? 1.55 : 1.85, tv = Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+  orbit.r = Math.max(half / tv, half / (tv * camera.aspect)) * 1.05;
+}
+addEventListener("resize", resize);
+resize();
+
+const target = new THREE.Vector3(0, -0.05, 0);
+function frame(now){
+  for (let i = tweens.length - 1; i >= 0; i--){
+    const t = tweens[i], k = Math.min(1, (now - t.t0) / t.dur);
+    t.fn(t.e(k));
+    if (k >= 1){ tweens.splice(i,1); t.res(); }
+  }
+  if (!orbit.touched && !reduce) orbit.targetTheta += 0.0016;
+  orbit.theta += (orbit.targetTheta - orbit.theta) * 0.12;
+  orbit.phi += (orbit.targetPhi - orbit.phi) * 0.12;
+  const r = orbit.r * orbit.zoom;
+  camera.position.set(
+    target.x + r * Math.sin(orbit.phi) * Math.sin(orbit.theta),
+    target.y + r * Math.cos(orbit.phi),
+    target.z + r * Math.sin(orbit.phi) * Math.cos(orbit.theta));
+  camera.lookAt(target);
+
+  pieces.forEach(p => {
+    if (p.glow > 0){
+      p.glow = Math.max(0, p.glow - 0.022);
+      const g = Math.sin(p.glow * Math.PI) * 0.35;
+      p.mat.emissive.setRGB(g*0.9, g*0.7, g*0.45);
+    }
+  });
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+buildLevel(0);
+requestAnimationFrame(frame);
+})();
+</script>
