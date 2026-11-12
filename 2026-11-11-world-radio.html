@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta name="sprint-public" content="yes">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-11-11 - world_radio</title>
+<style>
+:root{--bg:#0d0f12;--panel:#161a20;--line:#262c35;--ink:#e8ecf1;--dim:#8a94a3;--acc:#f2b33d;--ok:#4cc38a;--bad:#e5615a;--r:12px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{max-width:560px;margin:0 auto;padding:14px 14px 140px}
+h1{font-size:20px;letter-spacing:.5px;margin:4px 0 2px}
+h1 b{color:var(--acc)}
+.sub{color:var(--dim);font-size:13px;margin:0 0 12px}
+nav{display:flex;gap:6px;margin-bottom:12px}
+nav button{flex:1}
+button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;cursor:pointer}
+button[aria-pressed=true],button.on{border-color:var(--acc);color:var(--acc)}
+button:disabled{opacity:.45}
+#search{width:100%;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:6px}
+.hint{color:var(--dim);font-size:12px;margin:0 2px 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;max-height:220px;overflow:auto}
+.chips.cont{max-height:none;flex-wrap:nowrap;overflow-x:auto;margin-bottom:6px}
+.chips.cont button{white-space:nowrap}
+.chips button{padding:6px 10px;font-size:13px}
+.list{display:flex;flex-direction:column;gap:6px}
+.st{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}
+.st.playing{border-color:var(--acc)}
+.st .meta{flex:1;min-width:0}
+.st .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.st .tg{color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st button{padding:6px 9px}
+.msg{color:var(--dim);padding:14px 4px;text-align:center}
+.msg.err{color:var(--bad)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.big{font-size:24px;font-weight:700;text-align:center;margin:6px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.grid button.right{border-color:var(--ok);color:var(--ok)}
+.grid button.wrong{border-color:var(--bad);color:var(--bad)}
+.actions{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+#spin{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+.row{display:flex;justify-content:space-between;color:var(--dim);font-size:13px}
+#player{position:fixed;left:0;right:0;bottom:0;background:#11151b;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+#player .in{max-width:560px;margin:0 auto}
+#np{display:flex;align-items:center;gap:8px}
+#np .meta{flex:1;min-width:0}
+#npName{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#npInfo{color:var(--dim);font-size:12px}
+.hide{display:none!important}
+.eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px;width:14px}
+.eq i{width:3px;background:var(--acc);animation:eq 900ms infinite ease-in-out}
+.eq i:nth-child(2){animation-delay:-300ms}.eq i:nth-child(3){animation-delay:-600ms}
+@keyframes eq{0%,100%{height:3px}50%{height:14px}}
+@media (prefers-reduced-motion:reduce){.eq i{animation:none;height:10px}}
+</style>
+</head>
+<body>
+<h1>world<b>_</b>radio</h1>
+<p class="sub">Live radio from every country on Earth. Pick a place and listen.</p>
+<nav>
+  <button id="tabListen" aria-pressed="true">Listen</button>
+  <button id="tabRoulette" aria-pressed="false">Roulette</button>
+  <button id="tabFavs" aria-pressed="false">Favorites</button>
+</nav>
+<section id="viewListen">
+  <input id="search" type="search" placeholder="Search any country…" autocomplete="off" aria-label="Search countries">
+  <div class="chips cont" id="continents"></div>
+  <p class="hint" id="countryHint"></p>
+  <div class="chips" id="countries"></div>
+  <div class="list" id="stations"><p class="msg">Pick a country.</p></div>
+</section>
+<section id="viewRoulette" class="hide">
+  <div class="panel">
+    <div class="row"><span>Streak <b id="streak">0</b></span><span>Best <b id="best">0</b></span></div>
+    <div class="big" id="rqTitle">Where is this station?</div>
+    <p class="msg" id="rqMsg">Tap Spin to hear a random station from somewhere in the world.</p>
+    <div class="grid" id="choices"></div>
+    <div class="grid actions"><button id="spin">Spin</button><button id="reveal" disabled>Reveal</button></div>
+  </div>
+</section>
+<section id="viewFavs" class="hide">
+  <div class="list" id="favs"></div>
+</section>
+<div id="player" class="hide"><div class="in">
+  <div id="np">
+    <span class="eq hide" id="eq"><i></i><i></i><i></i></span>
+    <div class="meta"><div id="npName">—</div><div id="npInfo"></div></div>
+    <button id="favBtn" aria-pressed="false">☆</button>
+    <button id="playBtn">❚❚</button>
+  </div>
+</div></div>
+<audio id="audio" preload="none"></audio>
+<script>
+// world_radio core: pure logic, no DOM. Tested in Node, inlined into the page by scripts/build.mjs.
+
+const CONFIG = {
+  // Radio Browser mirrors, tried in order. Its docs ask apps to use a named server, not the bare domain.
+  servers: ['https://de1.api.radio-browser.info', 'https://nl1.api.radio-browser.info', 'https://at1.api.radio-browser.info'],
+  stationsPerCountry: 300,     // cap per country (the directory returns up to 2x this before the https/dedupe filter)
+  minStationsPerCountry: 1,     // countries with fewer https stations are hidden from the picker
+  rouletteMinStations: 20,      // roulette only draws from countries with at least this many stations
+  rouletteCountriesPerSpin: 4,  // countries loaded per spin (answer is one of them)
+  rouletteTopN: 25,
+  rouletteChoices: 4,
+  requestTimeoutMs: 8000,
+  featured: ['US', 'GB', 'FR', 'DE', 'BR', 'JP', 'IN', 'NG', 'MX', 'AU'],
+  storageKeys: { favorites: 'world_radio.favorites', streak: 'world_radio.streak', best: 'world_radio.best' },
+};
+
+function countriesUrl(server) {
+  return `${server}/json/countries?hidebroken=true&order=name`;
+}
+
+function searchUrl(server, countryCode, cfg = CONFIG) {
+  const q = new URLSearchParams({
+    countrycode: countryCode,
+    hidebroken: 'true',
+    is_https: 'true',
+    order: 'votes',
+    reverse: 'true',
+    limit: String(cfg.stationsPerCountry * 2), // headroom for the https / dedupe filter
+  });
+  return `${server}/json/stations/search?${q}`;
+}
+
+function clickUrl(server, uuid) {
+  return `${server}/json/url/${encodeURIComponent(uuid)}`;
+}
+
+const clean = (s, max = 80) => String(s ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+
+function isHttpsUrl(u) {
+  try {
+    return new URL(u).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// Emoji flag from an ISO 3166-1 alpha-2 code (two regional-indicator letters).
+function flag(code) {
+  if (!/^[A-Z]{2}$/.test(code ?? '')) return '';
+  return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+}
+
+// Short English country name from the code (the directory's names are long official ones); falls back to its name.
+let regionNames = null;
+function displayName(code, fallback) {
+  try {
+    regionNames ??= new Intl.DisplayNames(['en'], { type: 'region' });
+    const n = regionNames.of(code);
+    if (n && n !== code) return n;
+  } catch { /* old browser: use the directory's name */ }
+  return fallback || code;
+}
+
+// Raw /json/countries rows -> [{code, name, count}] with valid codes, merged, sorted by name.
+function normalizeCountries(rows, cfg = CONFIG) {
+  const by = new Map();
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const code = String(r?.iso_3166_1 ?? '').toUpperCase();
+    if (!/^[A-Z]{2}$/.test(code)) continue;
+    const count = Number.isFinite(+r.stationcount) ? +r.stationcount : 0;
+    const prev = by.get(code);
+    by.set(code, { code, name: prev?.name || displayName(code, clean(r.name, 60)), count: (prev?.count ?? 0) + count });
+  }
+  return [...by.values()].filter((c) => c.count >= cfg.minStationsPerCountry).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function nameOf(code, countries) {
+  return countries.find((c) => c.code === code)?.name ?? code;
+}
+
+// Continent of every ISO 3166-1 alpha-2 code (Central America and the Caribbean count as North America).
+const CONTINENTS = {
+  Africa: 'DZ AO BJ BW BF BI CV CM CF TD KM CG CD CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU YT MA MZ NA NE NG RE RW SH ST SN SC SL SO ZA SS SD TZ TG TN UG EH ZM ZW',
+  Asia: 'AF AM AZ BH BD BT BN KH CN CY GE HK IN ID IR IQ IL JP JO KZ KW KG LA LB MO MY MV MN MM NP KP OM PK PS PH QA SA SG KR LK SY TW TJ TH TL TR TM AE UZ VN YE',
+  Europe: 'AX AL AD AT BY BE BA BG HR CZ DK EE FO FI FR DE GI GR GG HU IS IE IM IT JE XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SJ SE CH UA GB VA',
+  'North America': 'AI AG AW BS BB BZ BM BQ VG CA KY CR CU CW DM DO SV GL GD GP GT HT HN JM MQ MX MS NI PA PR BL KN LC MF PM VC SX TT TC US VI UM',
+  'South America': 'AR BO BR CL CO EC FK GF GY PY PE SR UY VE',
+  Oceania: 'AS AU CK FJ PF GU KI MH FM NR NC NZ NU NF MP PW PG PN WS SB TK TO TV VU WF',
+};
+const CONTINENT_OF = Object.fromEntries(Object.entries(CONTINENTS).flatMap(([k, v]) => v.split(' ').map((c) => [c, k])));
+
+function continentOf(code) {
+  return CONTINENT_OF[code] ?? 'Other';
+}
+
+function countriesIn(countries, continent) {
+  return countries.filter((c) => continentOf(c.code) === continent);
+}
+
+// No query: featured countries first, then every other country by name.
+function orderCountries(countries, featured = CONFIG.featured) {
+  const first = featured.map((code) => countries.find((c) => c.code === code)).filter(Boolean);
+  return [...first, ...countries.filter((c) => !featured.includes(c.code))];
+}
+
+function filterCountries(countries, query) {
+  const q = clean(query, 40).toLowerCase();
+  if (!q) return countries;
+  return countries.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase() === q);
+}
+
+// Raw station rows -> playable stations: https streams only, no duplicates, best-voted first.
+function normalizeStations(rows, countryCode, cfg = CONFIG) {
+  const seen = new Set();
+  const out = [];
+  for (const r of Array.isArray(rows) ? rows : []) {
+    const stream = r?.url_resolved || r?.url;
+    if (!isHttpsUrl(stream)) continue;
+    const name = clean(r.name);
+    if (!name || !r.stationuuid) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key) || seen.has(stream)) continue;
+    seen.add(key);
+    seen.add(stream);
+    out.push({
+      id: String(r.stationuuid),
+      name,
+      stream,
+      country: countryCode,
+      city: clean(r.state, 40),
+      language: clean(r.language, 40).split(',')[0].trim(),
+      tags: clean(r.tags, 120).split(',').map((t) => t.trim()).filter(Boolean).slice(0, 3),
+      bitrate: Number.isFinite(+r.bitrate) ? +r.bitrate : 0,
+      votes: Number.isFinite(+r.votes) ? +r.votes : 0,
+    });
+  }
+  out.sort((a, b) => b.votes - a.votes || a.name.localeCompare(b.name));
+  return out.slice(0, cfg.stationsPerCountry);
+}
+
+// Small seeded PRNG so roulette rounds are testable.
+function rng(seed) {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s ^= s << 13; s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5; s >>>= 0;
+    return s / 4294967296;
+  };
+}
+
+function shuffle(arr, rand) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Countries big enough to make a fair roulette draw.
+function roulettePool(countries, cfg = CONFIG) {
+  return countries.filter((c) => c.count >= cfg.rouletteMinStations).map((c) => c.code);
+}
+
+// One roulette round: a hidden station plus country choices (from allCodes) that include the answer.
+function makeRound(stationsByCountry, allCodes, rand, cfg = CONFIG) {
+  const pool = Object.entries(stationsByCountry).filter(([, list]) => list.length);
+  if (!pool.length) return null;
+  const [answer, list] = pool[Math.floor(rand() * pool.length)];
+  const top = list.slice(0, cfg.rouletteTopN);
+  const station = top[Math.floor(rand() * top.length)];
+  const others = shuffle([...new Set(allCodes)].filter((c) => c !== answer), rand).slice(0, cfg.rouletteChoices - 1);
+  return { station, answer, choices: shuffle([answer, ...others], rand) };
+}
+
+function scoreGuess(round, guess, streak) {
+  const correct = guess === round.answer;
+  return { correct, streak: correct ? streak + 1 : 0 };
+}
+
+function toggleFavorite(favs, station) {
+  const has = favs.some((f) => f.id === station.id);
+  return has ? favs.filter((f) => f.id !== station.id) : [...favs, { id: station.id, name: station.name, stream: station.stream, country: station.country }];
+}
+
+// world_radio UI. Uses the core functions inlined above it. All station text goes into the page as text, never HTML.
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, props = {}, kids = []) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'text') n.textContent = v;
+      else if (k === 'on') for (const [ev, fn] of Object.entries(v)) n.addEventListener(ev, fn);
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids) n.append(c);
+    return n;
+  };
+  const store = {
+    get(key, dflt) { try { const v = localStorage.getItem(key); return v == null ? dflt : JSON.parse(v); } catch { return dflt; } },
+    set(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* storage off: fine */ } },
+  };
+  const K = CONFIG.storageKeys;
+
+  const state = {
+    countries: [],          // [{code, name, count}] from the directory
+    country: null,
+    query: '',
+    continent: 'Popular',   // 'Popular' = CONFIG.featured, else a key of CONTINENTS
+    cache: {},              // countryCode -> stations
+    server: null,           // the mirror that answered last
+    current: null,          // station playing
+    favs: store.get(K.favorites, []),
+    streak: store.get(K.streak, 0),
+    best: store.get(K.best, 0),
+    round: null,
+    rand: rng(Date.now() & 0xffffffff),
+  };
+  const audio = $('audio');
+  const label = (code) => `${flag(code)} ${nameOf(code, state.countries)}`.trim();
+
+  // ---------- data ----------
+  async function getJson(url) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), CONFIG.requestTimeoutMs);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } finally { clearTimeout(t); }
+  }
+
+  async function fromAnyServer(makeUrl) {
+    const servers = state.server ? [state.server, ...CONFIG.servers.filter((s) => s !== state.server)] : CONFIG.servers;
+    let lastErr;
+    for (const server of servers) {
+      try {
+        const data = await getJson(makeUrl(server));
+        state.server = server;
+        return data;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr ?? new Error('offline');
+  }
+
+  async function loadCountry(code) {
+    if (state.cache[code]) return state.cache[code];
+    const rows = await fromAnyServer((s) => searchUrl(s, code));
+    return (state.cache[code] = normalizeStations(rows, code));
+  }
+
+  // ---------- views ----------
+  const tabs = { Listen: 'viewListen', Roulette: 'viewRoulette', Favs: 'viewFavs' };
+  function show(name) {
+    for (const [t, v] of Object.entries(tabs)) {
+      $(`tab${t}`).setAttribute('aria-pressed', String(t === name));
+      $(v).classList.toggle('hide', t !== name);
+    }
+    if (name === 'Favs') renderFavs();
+  }
+  for (const t of Object.keys(tabs)) $(`tab${t}`).addEventListener('click', () => show(t));
+
+  function countryButton(c) {
+    return el('button', {
+      text: `${flag(c.code)} ${c.name}`.trim(), 'aria-pressed': String(state.country === c.code), 'data-code': c.code,
+      on: { click: () => pickCountry(c.code) },
+    });
+  }
+
+  function renderContinents() {
+    const names = ['Popular', ...Object.keys(CONTINENTS)];
+    if (state.countries.some((c) => continentOf(c.code) === 'Other')) names.push('Other');
+    $('continents').replaceChildren(...names.map((n) => el('button', {
+      text: n, 'aria-pressed': String(!state.query && state.continent === n),
+      on: { click: () => { state.continent = n; state.query = ''; $('search').value = ''; renderCountries(); } },
+    })));
+  }
+
+  function renderCountries() {
+    const box = $('countries');
+    if (!state.countries.length) return;
+    renderContinents();
+    const list = state.query
+      ? filterCountries(state.countries, state.query)
+      : state.continent === 'Popular'
+        ? orderCountries(state.countries).slice(0, CONFIG.featured.length)
+        : countriesIn(state.countries, state.continent);
+    if (!list.length) return box.replaceChildren(el('p', { class: 'msg', text: 'No country matches that.' }));
+    box.replaceChildren(...list.map(countryButton));
+    $('countryHint').textContent = state.query ? `${list.length} match` + (list.length === 1 ? '' : 'es') : `${state.continent} · ${list.length} of ${state.countries.length} countries · or search`;
+  }
+
+  async function loadCountries() {
+    $('countryHint').textContent = 'Loading countries…';
+    try {
+      state.countries = normalizeCountries(await fromAnyServer(countriesUrl));
+      renderCountries();
+    } catch {
+      $('countryHint').textContent = "Couldn't reach the radio directory. Check your connection and reload.";
+    }
+  }
+
+  $('search').addEventListener('input', (e) => { state.query = e.target.value; renderCountries(); });
+
+  async function pickCountry(code) {
+    state.country = code;
+    renderCountries();
+    const list = $('stations');
+    list.replaceChildren(el('p', { class: 'msg', text: 'Finding stations…' }));
+    try {
+      const stations = await loadCountry(code);
+      if (state.country !== code) return;
+      if (!stations.length) return list.replaceChildren(el('p', { class: 'msg', text: 'No https stations for this country right now.' }));
+      list.replaceChildren(el('p', { class: 'msg', text: `${label(code)} · ${stations.length} https stations, most-voted first` }), ...stations.map(stationRow));
+    } catch {
+      list.replaceChildren(el('p', { class: 'msg err', text: "Couldn't load stations. Check your connection and try again." }));
+    }
+  }
+
+  function stationRow(s) {
+    const isFav = state.favs.some((f) => f.id === s.id);
+    const info = [s.city, s.language, (s.tags ?? []).join(' · '), s.bitrate ? `${s.bitrate} kbps` : ''].filter(Boolean).join(' — ');
+    return el('div', { class: `st${state.current?.id === s.id ? ' playing' : ''}`, 'data-id': s.id }, [
+      el('div', { class: 'meta' }, [el('div', { class: 'nm', text: s.name }), el('div', { class: 'tg', text: info || label(s.country) })]),
+      el('button', { text: isFav ? '★' : '☆', 'aria-label': 'Favorite', on: { click: (e) => { favorite(s); e.target.textContent = state.favs.some((f) => f.id === s.id) ? '★' : '☆'; } } }),
+      el('button', { text: '▶', 'aria-label': 'Play', on: { click: () => play(s, false) } }),
+    ]);
+  }
+
+  function renderFavs() {
+    const box = $('favs');
+    if (!state.favs.length) return box.replaceChildren(el('p', { class: 'msg', text: 'No favorites yet. Tap ☆ on a station.' }));
+    box.replaceChildren(...state.favs.map((f) => stationRow({ ...f, city: '', language: '', tags: [], bitrate: 0 })));
+  }
+
+  function favorite(s) {
+    state.favs = toggleFavorite(state.favs, s);
+    store.set(K.favorites, state.favs);
+    syncPlayer();
+  }
+
+  // ---------- player ----------
+  function play(s, hidden) {
+    state.current = { ...s, hidden };
+    audio.src = s.stream;
+    audio.play().catch(() => { $('npInfo').textContent = 'Tap ▶ to start.'; });
+    if (state.server) fetch(clickUrl(state.server, s.id)).catch(() => {}); // Radio Browser's play counter
+    $('player').classList.remove('hide');
+    syncPlayer();
+    document.querySelectorAll('.st').forEach((n) => n.classList.toggle('playing', n.dataset.id === s.id));
+  }
+
+  function syncPlayer() {
+    const s = state.current;
+    if (!s) return;
+    $('npName').textContent = s.hidden ? 'Mystery station' : s.name;
+    $('npInfo').textContent = s.hidden ? 'Listen closely…' : label(s.country);
+    $('favBtn').classList.toggle('hide', !!s.hidden);
+    $('favBtn').textContent = state.favs.some((f) => f.id === s.id) ? '★' : '☆';
+  }
+
+  $('playBtn').addEventListener('click', () => {
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  });
+  $('favBtn').addEventListener('click', () => state.current && favorite(state.current));
+  audio.addEventListener('playing', () => { $('playBtn').textContent = '❚❚'; $('eq').classList.remove('hide'); syncPlayer(); });
+  audio.addEventListener('pause', () => { $('playBtn').textContent = '▶'; $('eq').classList.add('hide'); });
+  audio.addEventListener('waiting', () => { $('npInfo').textContent = 'Connecting…'; });
+  audio.addEventListener('error', () => {
+    $('npInfo').textContent = "This station isn't responding. Try another.";
+    $('eq').classList.add('hide');
+  });
+
+  // ---------- roulette ----------
+  function paintStreak() { $('streak').textContent = state.streak; $('best').textContent = state.best; }
+
+  async function spin() {
+    $('spin').disabled = true;
+    $('rqMsg').textContent = 'Spinning…';
+    $('choices').replaceChildren();
+    try {
+      if (!state.countries.length) await loadCountries();
+      const pool = roulettePool(state.countries);
+      const picks = shuffle(pool, state.rand).slice(0, CONFIG.rouletteCountriesPerSpin);
+      const results = await Promise.allSettled(picks.map(loadCountry));
+      const by = {};
+      picks.forEach((c, i) => { if (results[i].status === 'fulfilled') by[c] = results[i].value; });
+      const round = makeRound(by, pool, state.rand);
+      if (!round) throw new Error('empty');
+      state.round = round;
+      $('rqTitle').textContent = 'Where is this station?';
+      $('rqMsg').textContent = 'Listen, then pick a country.';
+      $('choices').replaceChildren(...round.choices.map((code) => el('button', {
+        text: label(code), 'data-code': code, on: { click: (e) => guess(code, e.currentTarget) },
+      })));
+      $('reveal').disabled = false;
+      play(round.station, true);
+    } catch {
+      $('rqMsg').textContent = "Couldn't load a station. Try again.";
+    } finally { $('spin').disabled = false; }
+  }
+
+  function guess(code, btn) {
+    const r = state.round;
+    if (!r || r.done) return;
+    const res = scoreGuess(r, code, state.streak);
+    state.streak = res.streak;
+    state.best = Math.max(state.best, state.streak);
+    store.set(K.streak, state.streak); store.set(K.best, state.best);
+    paintStreak();
+    btn.classList.add(res.correct ? 'right' : 'wrong');
+    $('choices').querySelector(`[data-code="${r.answer}"]`)?.classList.add('right');
+    reveal(res.correct ? 'Correct!' : 'Not quite —');
+  }
+
+  function reveal(head = 'It was') {
+    const r = state.round;
+    if (!r) return;
+    r.done = true;
+    $('rqTitle').textContent = `${head} ${label(r.answer)}`;
+    $('rqMsg').textContent = r.station.name;
+    $('reveal').disabled = true;
+    if (state.current?.id === r.station.id) { state.current.hidden = false; syncPlayer(); }
+  }
+  $('spin').addEventListener('click', spin);
+  $('reveal').addEventListener('click', () => {
+    if (state.round && !state.round.done) { state.streak = 0; store.set(K.streak, 0); paintStreak(); }
+    reveal();
+  });
+
+  // ---------- boot ----------
+  paintStreak();
+  loadCountries();
+})();
+
+</script>
+</body>
+</html>
