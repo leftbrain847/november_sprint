@@ -1,0 +1,1721 @@
+<!doctype html>
+<html lang="en">
+<head><meta name="robots" content="noindex,nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Setup Screener</title>
+<meta name="screener-data" content="none">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="vendor/fonts/fonts-project-index.css">
+<style>
+/* Layout: a terminal-like workbench. Setup rail on the left, results and one focused stock on the right. */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --sunk: #f6f8fa; --ink: #111820; --muted: #5a6573; --line: #d8dee5;
+  --accent: #1f47c9; --accent-soft: #e4eafb; --up: #11804c; --down: #c23a35; --pending: #8a6d1f;
+  --ema: #c27a00; --sma-fast: #1f47c9; --sma-slow: #7b3fb5;
+  --font-display: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1217; --surface: #151a21; --sunk: #11161c; --ink: #e5eaf0; --muted: #8b96a4; --line: #27303b;
+  --accent: #86a0ff; --accent-soft: #1d2640; --up: #3cc07e; --down: #f2736d; --pending: #d6b354;
+  --ema: #f0a63a; --sma-fast: #86a0ff; --sma-slow: #c08af0; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1217; --surface: #151a21; --sunk: #11161c; --ink: #e5eaf0; --muted: #8b96a4; --line: #27303b;
+  --accent: #86a0ff; --accent-soft: #1d2640; --up: #3cc07e; --down: #f2736d; --pending: #d6b354;
+  --ema: #f0a63a; --sma-fast: #86a0ff; --sma-slow: #c08af0; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 32px; }
+body.dragging::after { content: "Drop CSV files to screen them"; position: fixed; inset: 12px; border: 2px dashed var(--accent);
+  border-radius: 10px; display: grid; place-items: center; font: 600 20px var(--font-display); color: var(--accent); background: color-mix(in srgb, var(--bg) 85%, transparent); z-index: 20; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.pos { color: var(--up); } .neg { color: var(--down); }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding-block: 16px 14px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font-size: 22px; letter-spacing: -0.01em; }
+.brand .tag { font: 500 11px var(--font-data); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+#source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.pill { font: 500 12px var(--font-data); padding: 2px 8px; border-radius: 4px; }
+.pill-demo { background: color-mix(in srgb, var(--pending) 18%, transparent); color: var(--pending); }
+.pill-live { background: var(--accent-soft); color: var(--accent); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+#import-note { font-size: 12px; color: var(--muted); flex-basis: 100%; }
+#import-note:empty { display: none; }
+
+.layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.rail { display: grid; gap: 18px; }
+.rail h3, .section-label { font: 600 11px var(--font-data); text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 8px; }
+#setup-list { display: grid; gap: 6px; }
+@media (max-width: 860px) { #setup-list { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); } }
+.setup { display: flex; gap: 10px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; }
+.setup.on { border-color: var(--accent); background: var(--accent-soft); }
+.setup input { margin-top: 3px; accent-color: var(--accent); }
+.setup-text { display: grid; gap: 2px; min-width: 0; }
+.setup-name { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.setup-sum { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.count { font: 500 11px var(--font-data); color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.seg label { padding: 5px 14px; cursor: pointer; font-weight: 500; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--accent); color: var(--surface); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fields { display: grid; gap: 10px; }
+.field { display: grid; gap: 4px; font-size: 13px; }
+.field input, .field select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-family: var(--font-data); }
+.hint { font-size: 12px; color: var(--muted); }
+
+.main { display: grid; gap: 16px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.tabs { display: flex; gap: 2px; padding: 6px 6px 0; border-bottom: 1px solid var(--line); }
+.tab { border: 0; background: none; padding: 8px 12px; cursor: pointer; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+#table { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th { font: 600 11px var(--font-data); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); text-align: left; padding: 10px 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th.num { text-align: right; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tr[data-sym] { cursor: pointer; }
+tr[data-sym]:hover td { background: var(--sunk); }
+tr.sel td { background: var(--accent-soft); }
+tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.sym { font: 600 14px var(--font-data); display: block; }
+.co { font-size: 12px; color: var(--muted); font-weight: 400; font-family: var(--font-body); }
+h2 .co { font-size: 14px; margin-left: 6px; }
+.chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line); margin: 1px 4px 1px 0; white-space: nowrap; color: var(--muted); }
+.chip-on { border-color: var(--accent); color: var(--accent); }
+.verdict { display: inline-block; font: 600 11px var(--font-data); text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.v-good { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+.v-bad { color: var(--down); background: color-mix(in srgb, var(--down) 14%, transparent); }
+.v-mixed { color: var(--pending); background: color-mix(in srgb, var(--pending) 16%, transparent); }
+.v-na { color: var(--muted); background: var(--sunk); }
+.rec { display: block; font: 12px var(--font-data); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.star { border: 0; background: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--muted); padding: 4px; }
+.star.on { color: var(--pending); }
+.empty { padding: 28px 16px; color: var(--muted); margin: 0; }
+.spark polyline { stroke-width: 1.5; } .spark.up polyline { stroke: var(--up); } .spark.down polyline { stroke: var(--down); }
+.spark.up circle { fill: var(--up); } .spark.down circle { fill: var(--down); }
+@media (max-width: 640px) { .hide-sm { display: none; } }
+
+#detail { padding: 16px; display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+#detail > * { min-width: 0; }
+@media (max-width: 640px) { #source { flex-basis: 100%; order: 3; } }
+#detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+#detail-head h2 { font-size: 24px; }
+.quote { font-family: var(--font-data); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.quote b { font-size: 18px; }
+.chart-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 5px; }
+.legend .tri { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid var(--up); }
+.ranges { display: flex; gap: 4px; }
+.ranges button { border: 1px solid var(--line); background: var(--surface); border-radius: 5px; padding: 2px 9px; cursor: pointer; font: 500 12px var(--font-data); }
+.ranges button[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+#readout { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 12px var(--font-data); color: var(--muted); min-height: 18px; }
+#chart { width: 100%; touch-action: pan-y; }
+.chart { display: block; width: 100%; height: auto; }
+.chart .grid { stroke: var(--line); stroke-width: 1; } .chart .grid-v { stroke-dasharray: 2 4; }
+.chart .axis { fill: var(--muted); font: 11px var(--font-data); }
+.chart .wick { stroke-width: 1; } .chart .wick.up { stroke: var(--up); } .chart .wick.down { stroke: var(--down); }
+.chart .body.up { fill: var(--up); } .chart .body.down { fill: var(--down); }
+.chart .vol { opacity: 0.35; } .chart .vol.up { fill: var(--up); } .chart .vol.down { fill: var(--down); }
+.chart .line { stroke-width: 1.6; } .chart .ema { stroke: var(--ema); } .chart .sma-fast { stroke: var(--sma-fast); } .chart .sma-slow { stroke: var(--sma-slow); }
+.chart .marker.good { fill: var(--up); } .chart .marker.bad { fill: var(--down); } .chart .marker.pending { fill: var(--pending); }
+.chart .marker { stroke: var(--surface); stroke-width: 1; }
+.chart .last-tag { fill: var(--ink); } .chart .last-text { fill: var(--surface); font: 500 11px var(--font-data); }
+.chart .crosshair { stroke: var(--muted); stroke-dasharray: 3 3; }
+.lede { margin: 0 0 10px; color: var(--muted); max-width: 70ch; }
+.scroll { overflow-x: auto; }
+.rec-table td { padding: 7px 10px; }
+.rec-table tr.combo td { font-weight: 600; background: var(--accent-soft); }
+.rec-table tr.in-screen td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.rec-table tr.base td { color: var(--muted); font-style: italic; }
+#record h3 { font-size: 15px; margin: 16px 0 8px; }
+.cases { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+.cases li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; font: 12px var(--font-data); }
+.near-count { color: var(--pending); }
+.near-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 18px 12px 6px; border-top: 1px solid var(--line); }
+.near-head h3 { font-size: 15px; }
+.near-head .muted { font-size: 12px; }
+.meter { display: inline-block; width: 84px; height: 8px; border-radius: 4px; background: var(--sunk); border: 1px solid var(--line); overflow: hidden; vertical-align: middle; }
+.meter span { display: block; height: 100%; background: var(--pending); }
+.missing span { display: block; font-size: 13px; max-width: 46ch; }
+.closest { display: flex; align-items: center; gap: 8px; font-size: 12px; min-width: 220px; }
+.best-intro { padding: 14px 12px 8px; display: grid; gap: 10px; }
+.tally { display: grid; gap: 4px; max-width: 460px; }
+.tally-row { display: grid; grid-template-columns: 140px 1fr 28px; gap: 10px; align-items: center; font-size: 12px; }
+.tally-bar { height: 8px; background: var(--sunk); border-radius: 4px; overflow: hidden; }
+.tally-bar span { display: block; height: 100%; background: var(--accent); }
+.link { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0 0 0 6px; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+.chip-best { border-color: var(--up); color: var(--up); }
+.none-note { padding: 10px 12px 14px; margin: 0; font-size: 12px; color: var(--muted); }
+.more { margin: 10px 12px 14px; }
+.tabs { overflow-x: auto; }
+.tab { white-space: nowrap; }
+.foot { margin-top: 20px; font-size: 12px; color: var(--muted); max-width: 90ch; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><h1>Setup Screener</h1><span class="tag">daily bars</span></div>
+  <div id="source"></div>
+  <div class="actions">
+    <label class="btn btn-primary" for="file">Import CSV</label>
+    <input id="file" type="file" accept=".csv,.txt,text/csv" multiple hidden>
+    <button class="btn" id="load-feed" type="button" hidden>Back to daily prices</button>
+    <button class="btn" id="load-demo" type="button" hidden>Demo data</button>
+  </div>
+  <div id="import-note" role="status"></div>
+</header>
+
+<div class="layout">
+  <aside class="rail">
+    <section>
+      <h3>Setups</h3>
+      <div id="setup-list"></div>
+    </section>
+    <section>
+      <h3>Match</h3>
+      <div class="seg" role="radiogroup" aria-label="Match mode">
+        <label><input type="radio" name="mode" id="mode-all" value="all" checked>All selected</label>
+        <label><input type="radio" name="mode" id="mode-any" value="any">Any selected</label>
+      </div>
+    </section>
+    <section class="fields">
+      <h3>Filters</h3>
+      <label class="field" for="min-price">Min price ($)<input id="min-price" type="number" min="0" step="1"></label>
+      <label class="field" for="min-dv">Min avg $ volume per day<input id="min-dv" type="number" min="0" step="100000"></label>
+      <label class="field" for="sector" id="sector-field" hidden>Sector<select id="sector"></select></label>
+      <label class="field" for="horizon">Track record looks ahead
+        <select id="horizon"><option value="5">5 sessions (1 week)</option><option value="10">10 sessions (2 weeks)</option><option value="20">20 sessions (1 month)</option></select>
+      </label>
+      <p class="hint">CSV: one file per stock (named like <code>AAPL.csv</code>) or one file with a Symbol column. Needs Date, Open, High, Low, Close, Volume. About 2 years of daily bars gives a track record.</p>
+    </section>
+  </aside>
+
+  <main class="main">
+    <section class="card">
+      <div class="tabs" role="tablist">
+        <button class="tab" id="tab-matches" role="tab" type="button">Matches</button>
+        <button class="tab" id="tab-best" role="tab" type="button">Best setup per stock</button>
+        <button class="tab" id="tab-watch" role="tab" type="button">Watchlist</button>
+      </div>
+      <div id="table"></div>
+    </section>
+
+    <section class="card" id="detail" hidden>
+      <div id="detail-head"></div>
+      <div class="chart-bar">
+        <div class="legend"><span><i style="background:var(--ema)"></i>20 EMA</span><span><i style="background:var(--sma-fast)"></i>50 SMA</span><span><i style="background:var(--sma-slow)"></i>200 SMA</span><span><i class="tri"></i>your screen fired (green worked, red failed, gold open)</span></div>
+        <div class="ranges"><button type="button" data-range="65">3M</button><button type="button" data-range="130">6M</button><button type="button" data-range="252">1Y</button><button type="button" data-range="520">2Y</button></div>
+      </div>
+      <div id="readout"></div>
+      <div id="chart"></div>
+      <div id="record"></div>
+    </section>
+  </main>
+</div>
+<p class="foot">Screens and track records are computed in your browser from the data shown. Past behavior of a setup on a stock is a description of history, not a forecast or advice. Demo data is generated and does not describe real companies. When the page shows daily prices, it says so at the top; they come from public Yahoo Finance and Nasdaq pages and can be late or wrong.</p>
+<script type="module">
+const __mod_config = (() => {
+// Every tunable number lives here. Setups, the screener, the track record and the demo data read from this object.
+const CONFIG = {
+  indicators: { fastSma: 50, slowSma: 200, ema: 20, rsi: 14, bbPeriod: 20, bbStdDev: 2, volumeAvg: 50, yearBars: 252 },
+  setups: {
+    breakout: { volumeMultiple: 1.5 },
+    goldenCross: { lookbackBars: 5 },
+    pullback: { bandPct: 0.02, rsiMin: 38, rsiMax: 55 },
+    oversoldBounce: { level: 30, lookbackBars: 3 },
+    squeeze: { window: 120, percentile: 0.1 },
+    gapUp: { minGapPct: 0.03, volumeMultiple: 2 },
+    nr7: { bars: 7 },
+  },
+  trackRecord: { horizonBars: 10, minSamples: 3 },
+  // "Close to triggering": how far out a stock may be and still count as near. score 1 = fires; >= minScore = near.
+  near: { minScore: 0.6, breakoutPct: 0.04, crossPct: 0.03, pullbackPct: 0.03, rsiPoints: 8, squeezePercentile: 0.15 },
+  leaderboard: { minWinRate: 0.5 },
+  filters: { minPrice: 5, minDollarVolume: 1_000_000 },
+  chart: { defaultBars: 130, width: 900, height: 380, volumeShare: 0.2 },
+  demo: { seed: 20261113, bars: 520, endDate: '2026-11-13' },
+  // Nightly data: keyless public endpoints (Yahoo chart first, Nasdaq as fallback). Unofficial, for personal use.
+  feed: {
+    // Universe: every US-listed common stock from Nasdaq's public screener above these cutoffs, plus `extra`.
+    universe: { minMarketCap: 1_000_000_000, minPrice: 5 },
+    extra: ['SPY', 'QQQ', 'IWM', 'DIA', 'XLK', 'XLF', 'XLE', 'XLV', 'XLY', 'XLP', 'XLI', 'XLB', 'XLU', 'XLRE', 'XLC', 'SMH', 'GLD', 'TLT'],
+    // Used when the universe list can't be fetched (and by tests): a fixed starter list.
+    tickers: ['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AVGO', 'AMD', 'NFLX', 'CRM', 'ORCL',
+      'JPM', 'BAC', 'GS', 'V', 'MA', 'UNH', 'LLY', 'JNJ', 'XOM', 'CVX', 'CAT', 'GE', 'HD', 'COST', 'WMT', 'KO', 'PEP', 'DIS', 'BRK-B'],
+    range: '2y',
+    concurrency: 2,
+    delayMs: 150,
+    timeoutMs: 20000,
+    userAgent: 'setup-screener/0.1 (personal research tool)',
+    outFile: 'data/prices.json',
+    siteDir: 'data/site',
+    barChunks: 64,
+    sparkBars: 40,
+    horizons: [5, 10, 20],
+  },
+  // Rows drawn per table before "Show more"; multi-setup track records computed for this many rows up front.
+  ui: { pageSize: 100, comboRecords: 40 },
+  storageKey: 'stock-screener.watchlist.v1',
+};
+
+return { CONFIG };
+})();
+const __mod_indicators = (() => {
+// Pure indicator math on plain number arrays. Output arrays line up with the input; null where not enough history.
+function sma(values, n) {
+  const out = new Array(values.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < values.length; i++) {
+    sum += values[i];
+    if (i >= n) sum -= values[i - n];
+    if (i >= n - 1) out[i] = sum / n;
+  }
+  return out;
+}
+
+function ema(values, n) {
+  const out = new Array(values.length).fill(null);
+  if (values.length < n) return out;
+  const k = 2 / (n + 1);
+  let prev = values.slice(0, n).reduce((a, b) => a + b, 0) / n;
+  out[n - 1] = prev;
+  for (let i = n; i < values.length; i++) {
+    prev = values[i] * k + prev * (1 - k);
+    out[i] = prev;
+  }
+  return out;
+}
+
+// Wilder's RSI.
+function rsi(closes, n) {
+  const out = new Array(closes.length).fill(null);
+  if (closes.length <= n) return out;
+  let gain = 0;
+  let loss = 0;
+  for (let i = 1; i <= n; i++) {
+    const d = closes[i] - closes[i - 1];
+    if (d > 0) gain += d; else loss -= d;
+  }
+  gain /= n;
+  loss /= n;
+  const value = () => (loss === 0 ? 100 : 100 - 100 / (1 + gain / loss));
+  out[n] = value();
+  for (let i = n + 1; i < closes.length; i++) {
+    const d = closes[i] - closes[i - 1];
+    gain = (gain * (n - 1) + Math.max(d, 0)) / n;
+    loss = (loss * (n - 1) + Math.max(-d, 0)) / n;
+    out[i] = value();
+  }
+  return out;
+}
+
+function bollinger(closes, n, k) {
+  const mid = sma(closes, n);
+  const upper = new Array(closes.length).fill(null);
+  const lower = new Array(closes.length).fill(null);
+  const width = new Array(closes.length).fill(null);
+  for (let i = n - 1; i < closes.length; i++) {
+    let sq = 0;
+    for (let j = i - n + 1; j <= i; j++) sq += (closes[j] - mid[i]) ** 2;
+    const sd = Math.sqrt(sq / n);
+    upper[i] = mid[i] + k * sd;
+    lower[i] = mid[i] - k * sd;
+    width[i] = mid[i] ? (upper[i] - lower[i]) / mid[i] : null;
+  }
+  return { mid, upper, lower, width };
+}
+
+// Max/min/mean of the n values BEFORE index i (today excluded), so "new high" and "volume vs average" compare
+// today against history rather than against itself.
+function priorWindow(values, n, reduce) {
+  const out = new Array(values.length).fill(null);
+  for (let i = n; i < values.length; i++) out[i] = reduce(values.slice(i - n, i));
+  return out;
+}
+const priorMax = (values, n) => priorWindow(values, n, (w) => Math.max(...w));
+const priorMean = (values, n) => priorWindow(values, n, (w) => w.reduce((a, b) => a + b, 0) / n);
+
+// Share of the last n non-null values (today included) that are <= today's. 0 = lowest in the window.
+function percentRank(values, n) {
+  const out = new Array(values.length).fill(null);
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] == null || i < n - 1) continue;
+    const w = values.slice(i - n + 1, i + 1).filter((v) => v != null);
+    if (w.length < n) continue;
+    out[i] = w.filter((v) => v < values[i]).length / (n - 1);
+  }
+  return out;
+}
+
+return { sma, ema, rsi, bollinger, priorMax, priorMean, percentRank };
+})();
+const __mod_setups = (() => {
+// Setup definitions. Each one answers "does this setup hold on bar i?" from a precomputed context, so the same
+// test runs for today's screen and for every past bar in the track record.
+const { sma, ema, rsi, bollinger, priorMax, priorMean, percentRank } = __mod_indicators;
+function buildContext(bars, cfg) {
+  const p = cfg.indicators;
+  const close = bars.map((b) => b.close);
+  const high = bars.map((b) => b.high);
+  const low = bars.map((b) => b.low);
+  const open = bars.map((b) => b.open);
+  const volume = bars.map((b) => b.volume);
+  const range = bars.map((b) => b.high - b.low);
+  const bb = bollinger(close, p.bbPeriod, p.bbStdDev);
+  return {
+    bars, close, high, low, open, volume, range,
+    smaFast: sma(close, p.fastSma),
+    smaSlow: sma(close, p.slowSma),
+    ema: ema(close, p.ema),
+    rsi: rsi(close, p.rsi),
+    bb,
+    bbRank: percentRank(bb.width, cfg.setups.squeeze.window),
+    yearHigh: priorMax(high, p.yearBars),
+    avgVolume: priorMean(volume, p.volumeAvg),
+  };
+}
+
+const ok = (...v) => v.every((x) => x != null && Number.isFinite(x));
+
+const SETUPS = [
+  {
+    id: 'breakout',
+    name: '52-week breakout',
+    summary: 'Closes above the prior 52-week high on heavy volume.',
+    test(c, i, s) {
+      return ok(c.yearHigh[i], c.avgVolume[i]) && c.close[i] > c.yearHigh[i] && c.volume[i] >= s.breakout.volumeMultiple * c.avgVolume[i];
+    },
+  },
+  {
+    id: 'goldenCross',
+    name: 'Golden cross',
+    summary: '50-day average crossed above the 200-day in the last few sessions.',
+    test(c, i, s) {
+      for (let j = i; j > i - s.goldenCross.lookbackBars && j > 0; j--) {
+        if (ok(c.smaFast[j], c.smaSlow[j], c.smaFast[j - 1], c.smaSlow[j - 1]) && c.smaFast[j - 1] <= c.smaSlow[j - 1] && c.smaFast[j] > c.smaSlow[j]) return true;
+      }
+      return false;
+    },
+  },
+  {
+    id: 'pullback',
+    name: 'Uptrend pullback',
+    summary: 'In an uptrend (50 > 200, price above 200) and back near the 20-day EMA with RSI cooled off.',
+    test(c, i, s) {
+      const q = s.pullback;
+      if (!ok(c.smaFast[i], c.smaSlow[i], c.ema[i], c.rsi[i])) return false;
+      return c.smaFast[i] > c.smaSlow[i] && c.close[i] > c.smaSlow[i] && Math.abs(c.close[i] / c.ema[i] - 1) <= q.bandPct && c.rsi[i] >= q.rsiMin && c.rsi[i] <= q.rsiMax;
+    },
+  },
+  {
+    id: 'oversoldBounce',
+    name: 'Oversold bounce',
+    summary: 'RSI(14) climbed back above 30 after dipping below it.',
+    test(c, i, s) {
+      const q = s.oversoldBounce;
+      for (let j = i; j > i - q.lookbackBars && j > 0; j--) {
+        if (ok(c.rsi[j], c.rsi[j - 1]) && c.rsi[j - 1] < q.level && c.rsi[j] >= q.level) return true;
+      }
+      return false;
+    },
+  },
+  {
+    id: 'squeeze',
+    name: 'Volatility squeeze',
+    summary: 'Bollinger Band width is in the tightest 10% of the last 120 sessions.',
+    test(c, i, s) {
+      return ok(c.bbRank[i]) && c.bbRank[i] <= s.squeeze.percentile;
+    },
+  },
+  {
+    id: 'gapUp',
+    name: 'Gap up on volume',
+    summary: 'Opens 3%+ above the prior close on at least twice average volume.',
+    test(c, i, s) {
+      const q = s.gapUp;
+      return i > 0 && ok(c.avgVolume[i]) && c.open[i] >= c.close[i - 1] * (1 + q.minGapPct) && c.volume[i] >= q.volumeMultiple * c.avgVolume[i];
+    },
+  },
+  {
+    id: 'nr7',
+    name: 'NR7 coil',
+    summary: 'Narrowest daily range of the last 7 sessions, a common pre-breakout pause.',
+    test(c, i, s) {
+      const n = s.nr7.bars;
+      if (i < n - 1) return false;
+      for (let j = i - n + 1; j < i; j++) if (c.range[j] <= c.range[i]) return false;
+      return true;
+    },
+  },
+];
+
+const setupById = (id) => SETUPS.find((s) => s.id === id);
+
+// A combination of setups is itself a setup: "all" needs every one on the same bar, "any" needs one.
+function combinedTest(ids, mode) {
+  const list = ids.map(setupById).filter(Boolean);
+  return (c, i, s) => (list.length === 0 ? false : mode === 'any' ? list.some((x) => x.test(c, i, s)) : list.every((x) => x.test(c, i, s)));
+}
+
+return { buildContext, SETUPS, setupById, combinedTest };
+})();
+const __mod_csv = (() => {
+// CSV import. Accepts the daily-history exports most sites give (Yahoo, Stooq, brokers): Date, Open, High, Low,
+// Close, Volume, with optional Adj Close and an optional Symbol/Ticker column for several stocks in one file.
+const ALIASES = {
+  date: ['date', 'time', 'timestamp', 'datetime'],
+  open: ['open', 'o'],
+  high: ['high', 'h'],
+  low: ['low', 'l'],
+  close: ['close', 'c', 'last', 'price'],
+  volume: ['volume', 'vol', 'v'],
+  symbol: ['symbol', 'ticker', 'name', 'code'],
+};
+
+function splitLine(line) {
+  const out = [];
+  let cur = '';
+  let quoted = false;
+  for (const ch of line) {
+    if (ch === '"') quoted = !quoted;
+    else if (ch === ',' && !quoted) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim());
+}
+
+const num = (s) => {
+  const v = Number(String(s ?? '').replace(/[$,\s]/g, ''));
+  return Number.isFinite(v) ? v : NaN;
+};
+
+function isoDate(s) {
+  const t = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10);
+  if (/^\d{8}$/.test(t)) return `${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}`;
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // US M/D/YYYY
+  if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  return null;
+}
+
+function symbolFromFilename(name) {
+  return String(name).replace(/\.[^.]+$/, '').replace(/[_ ](daily|d|history|prices?)$/i, '').replace(/\.us$/i, '').toUpperCase();
+}
+
+// Returns { stocks: Map<symbol, bars[]>, skipped: number }. Throws with a fixable message on a bad header.
+function parseCsv(text, fallbackSymbol = 'IMPORTED') {
+  const lines = String(text).replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) throw new Error('The file has no data rows.');
+  const header = splitLine(lines[0]).map((h) => h.toLowerCase().replace(/[<>]/g, ''));
+  const col = {};
+  for (const [key, names] of Object.entries(ALIASES)) col[key] = header.findIndex((h) => names.includes(h));
+  const missing = ['date', 'open', 'high', 'low', 'close'].filter((k) => col[k] < 0);
+  if (missing.length) throw new Error(`Missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Expected a header like Date,Open,High,Low,Close,Volume.`);
+  const stocks = new Map();
+  let skipped = 0;
+  for (const line of lines.slice(1)) {
+    const f = splitLine(line);
+    const bar = {
+      date: isoDate(f[col.date]),
+      open: num(f[col.open]), high: num(f[col.high]), low: num(f[col.low]), close: num(f[col.close]),
+      volume: col.volume >= 0 ? num(f[col.volume]) : 0,
+    };
+    if (!bar.date || [bar.open, bar.high, bar.low, bar.close].some(Number.isNaN)) { skipped++; continue; }
+    if (Number.isNaN(bar.volume)) bar.volume = 0;
+    const sym = (col.symbol >= 0 && f[col.symbol] ? f[col.symbol] : fallbackSymbol).toUpperCase();
+    if (!stocks.has(sym)) stocks.set(sym, []);
+    stocks.get(sym).push(bar);
+  }
+  for (const [sym, bars] of stocks) {
+    bars.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+    stocks.set(sym, bars.filter((b, i) => i === 0 || b.date !== bars[i - 1].date));
+  }
+  return { stocks, skipped };
+}
+
+return { symbolFromFilename, parseCsv };
+})();
+const __mod_demo_data = (() => {
+// Synthetic demo universe: seeded, so every clone, test and screenshot sees the same prices. These are made-up
+// companies with made-up prices, shown with a "demo data" label everywhere they appear. A few end in a scripted
+// "story" so the first screen has live matches (and one near-miss) to look at; the rest are plain random walks with regime changes.
+const DEMO_UNIVERSE = [
+  { symbol: 'ALPN', name: 'Alpine Robotics', price: 84, story: 'breakout' },
+  { symbol: 'BRCK', name: 'Brickline Materials', price: 41, story: 'pullback' },
+  { symbol: 'CDRW', name: 'Cedarwood Health', price: 132, story: 'squeeze' },
+  { symbol: 'DLTA', name: 'Delta Grid Power', price: 27, story: 'gap' },
+  { symbol: 'EMBR', name: 'Ember Semiconductor', price: 210, story: 'bounce' },
+  { symbol: 'FJRD', name: 'Fjord Shipping', price: 18, story: 'pullback' },
+  { symbol: 'GLNT', name: 'Galenite Mining', price: 9, story: null },
+  { symbol: 'HRBR', name: 'Harborview Bank', price: 56, story: 'breakout' },
+  { symbol: 'IRIS', name: 'Iris Optics', price: 73, story: null },
+  { symbol: 'JUNO', name: 'Juno Biotherapeutics', price: 22, story: 'bounce' },
+  { symbol: 'KSTL', name: 'Kestrel Aerospace', price: 148, story: null },
+  { symbol: 'LMNR', name: 'Luminar Foods', price: 35, story: 'squeeze' },
+  { symbol: 'MRDN', name: 'Meridian Software', price: 310, story: null },
+  { symbol: 'NMBS', name: 'Nimbus Cloud', price: 64, story: 'gap' },
+  { symbol: 'ORCH', name: 'Orchard Retail', price: 47, story: null },
+  { symbol: 'PRSM', name: 'Prism Payments', price: 119, story: 'nearBreakout' },
+  { symbol: 'QRTZ', name: 'Quartz Instruments', price: 88, story: null },
+  { symbol: 'RVNE', name: 'Ravine Energy', price: 31, story: null },
+  { symbol: 'SLTE', name: 'Slate Media', price: 14, story: null },
+  { symbol: 'TNDR', name: 'Tundra Logistics', price: 52, story: null },
+];
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Weekdays only, counting back from endDate. Holidays are ignored: this is demo data.
+function businessDays(endDate, count) {
+  const out = [];
+  const d = new Date(`${endDate}T00:00:00Z`);
+  while (out.length < count) {
+    const wd = d.getUTCDay();
+    if (wd !== 0 && wd !== 6) out.push(d.toISOString().slice(0, 10));
+    d.setUTCDate(d.getUTCDate() - 1);
+  }
+  return out.reverse();
+}
+
+// Daily return plan for the final bars of each story. null = keep the random walk.
+function storyPlan(story, n) {
+  const plan = new Array(n).fill(null);
+  const tail = (arr) => arr.forEach((v, k) => { plan[n - arr.length + k] = v; });
+  if (story === 'breakout') tail([...Array(40)].map(() => ({ approach: 0.995, sigma: 0.008 })).concat([{ drift: 0, sigma: 0, target: 1.025, volume: 2.6 }]));
+  if (story === 'nearBreakout') tail([...Array(40)].map(() => ({ approach: 0.97, sigma: 0.008 })).concat([{ drift: 0, sigma: 0, target: 0.988, volume: 0.9 }]));
+  if (story === 'squeeze') tail([...Array(45)].map(() => ({ drift: 0, sigma: 0.0025 })));
+  if (story === 'gap') tail([...Array(20)].map(() => ({ drift: 0, sigma: 0.01 })).concat([{ drift: 0.01, sigma: 0, gap: 0.055, volume: 3.2 }]));
+  if (story === 'bounce') tail([...Array(9)].map(() => ({ drift: -0.028, sigma: 0.004 })).concat([{ drift: 0.055, sigma: 0, volume: 1.8 }, { drift: 0.03, sigma: 0, volume: 1.4 }]));
+  if (story === 'pullback') tail([...Array(60)].map(() => ({ drift: 0.005, sigma: 0.009 })).concat([...Array(7)].map(() => ({ drift: -0.0045, sigma: 0.002 }))));
+  return plan;
+}
+
+function generateStock(spec, index, cfg) {
+  const { seed, bars: n, endDate } = cfg.demo;
+  const rand = mulberry32(seed + index * 7919);
+  const gauss = () => {
+    let u = 0;
+    let v = 0;
+    while (u === 0) u = rand();
+    while (v === 0) v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  };
+  const dates = businessDays(endDate, n);
+  const plan = storyPlan(spec.story, n);
+  const baseVolume = 4e5 + rand() * 6e6;
+  let drift = 0.0004;
+  let sigma = 0.012 + rand() * 0.012;
+  let prev = spec.price * (0.55 + rand() * 0.5);
+  const bars = [];
+  for (let i = 0; i < n; i++) {
+    if (rand() < 1 / 55) { drift = (rand() - 0.45) * 0.004; sigma = 0.008 + rand() * 0.022; }
+    const p = plan[i];
+    let gap = rand() < 0.012 ? (rand() < 0.6 ? 1 : -1) * (0.03 + rand() * 0.06) : 0;
+    let volMult = gap ? 2.2 + rand() * 2 : 1;
+    let r = (p ? p.drift ?? 0 : drift) + (p ? p.sigma : sigma) * gauss();
+    if (p?.gap) { gap = p.gap; volMult = p.volume; }
+    else if (p?.volume) volMult = p.volume;
+    const yearHigh = bars.length ? Math.max(...bars.slice(-cfg.indicators.yearBars).map((b) => b.high)) : prev;
+    // approach: glide toward a multiple of the 52-week high over the remaining story bars; target: land on it.
+    if (p?.approach) r = (yearHigh * p.approach / prev) ** (1 / (n - i)) - 1 + p.sigma * gauss();
+    if (p?.target) r = (yearHigh * p.target) / prev - 1;
+    const open = prev * (1 + gap + (p ? 0 : 0.3 * sigma * gauss()));
+    const close = gap ? open * (1 + r) : prev * (1 + r);
+    const wick = Math.abs(gauss()) * (p ? Math.max(p.sigma, 0.002) : sigma) * 0.6;
+    const high = Math.max(open, close) * (1 + wick);
+    const low = Math.min(open, close) * (1 - wick * 0.9);
+    const volume = Math.round(baseVolume * volMult * Math.exp(0.35 * gauss()) * (1 + 8 * Math.abs(close / prev - 1)));
+    const bar = { date: dates[i], open: round(open), high: round(high), low: round(low), close: round(close), volume };
+    bars.push(bar);
+    prev = close;
+  }
+  return bars;
+}
+
+const round = (v) => Math.round(v * 100) / 100;
+
+function demoStocks(cfg) {
+  const stocks = new Map();
+  DEMO_UNIVERSE.forEach((spec, i) => stocks.set(spec.symbol, generateStock(spec, i, cfg)));
+  return stocks;
+}
+
+return { DEMO_UNIVERSE, mulberry32, businessDays, generateStock, demoStocks };
+})();
+const __mod_screener = (() => {
+// The screen (which stocks meet the chosen setups today) and the track record (what happened on this same stock
+// after each past time the same setups lined up). The track record is the screener's point of difference: a match
+// comes with its own history instead of a bare signal.
+const { buildContext, SETUPS, combinedTest } = __mod_setups;
+const median = (xs) => {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+// First bar where every indicator a setup might read has history.
+const warmupBars = (cfg) => Math.max(cfg.indicators.slowSma, cfg.indicators.yearBars, cfg.setups.squeeze.window + cfg.indicators.bbPeriod);
+
+// Triggers are de-duplicated: a setup that stays true for several days counts once, then waits out the horizon
+// before it can count again, so one long signal can't pose as many wins.
+function trackRecord(ctx, test, cfg) {
+  const h = cfg.trackRecord.horizonBars;
+  const n = ctx.close.length;
+  const start = warmupBars(cfg);
+  const triggers = [];
+  const outcomes = [];
+  const baseline = [];
+  let last = -Infinity;
+  for (let i = start; i < n; i++) {
+    if (i + h < n) baseline.push(ctx.close[i + h] / ctx.close[i] - 1);
+    if (i - last <= h || !test(ctx, i, cfg.setups)) continue;
+    last = i;
+    triggers.push(i);
+    if (i + h < n) outcomes.push({ index: i, ret: ctx.close[i + h] / ctx.close[i] - 1 });
+  }
+  const rets = outcomes.map((o) => o.ret);
+  const med = median(rets);
+  const baseMed = median(baseline);
+  return {
+    horizon: h,
+    triggers,
+    outcomes,
+    count: rets.length,
+    winRate: rets.length ? rets.filter((r) => r > 0).length / rets.length : null,
+    median: med,
+    mean: mean(rets),
+    best: rets.length ? Math.max(...rets) : null,
+    worst: rets.length ? Math.min(...rets) : null,
+    baselineMedian: baseMed,
+    baselineWinRate: baseline.length ? baseline.filter((r) => r > 0).length / baseline.length : null,
+    edge: med != null && baseMed != null ? med - baseMed : null,
+    enough: rets.length >= cfg.trackRecord.minSamples,
+  };
+}
+
+function analyzeStock(symbol, bars, cfg) {
+  const ctx = buildContext(bars, cfg);
+  const i = bars.length - 1;
+  const firing = SETUPS.filter((s) => i >= 1 && s.test(ctx, i, cfg.setups)).map((s) => s.id);
+  const recent = bars.slice(-cfg.indicators.volumeAvg);
+  return {
+    symbol,
+    bars,
+    ctx,
+    last: bars[i].close,
+    date: bars[i].date,
+    changePct: i > 0 ? bars[i].close / bars[i - 1].close - 1 : 0,
+    dollarVolume: mean(recent.map((b) => b.close * b.volume)),
+    firing,
+  };
+}
+
+// selection: { ids: string[], mode: 'all'|'any' }, filters: { minPrice, minDollarVolume }.
+function screen(analyses, selection, filters, cfg) {
+  const test = combinedTest(selection.ids, selection.mode);
+  const rows = [];
+  for (const a of analyses) {
+    if (a.last < filters.minPrice || (a.dollarVolume ?? 0) < filters.minDollarVolume) continue;
+    const enoughHistory = a.bars.length > warmupBars(cfg);
+    const matches = selection.ids.length > 0 && test(a.ctx, a.bars.length - 1, cfg.setups);
+    if (!matches) continue;
+    rows.push({ ...a, record: enoughHistory ? trackRecord(a.ctx, test, cfg) : null });
+  }
+  return rows.sort((x, y) => (y.record?.enough ? y.record.edge : -Infinity) - (x.record?.enough ? x.record.edge : -Infinity) || x.symbol.localeCompare(y.symbol));
+}
+
+// Plain-language verdict on a track record, for the table chip.
+function verdict(record) {
+  if (!record) return { tone: 'na', label: 'Short history' };
+  if (!record.enough) return { tone: 'na', label: `${record.count} past ${record.count === 1 ? 'case' : 'cases'}` };
+  if (record.edge > 0.01 && record.winRate >= 0.55) return { tone: 'good', label: 'Has worked here' };
+  if (record.edge < -0.01 && record.winRate <= 0.45) return { tone: 'bad', label: 'Has failed here' };
+  return { tone: 'mixed', label: 'Mixed record' };
+}
+
+return { warmupBars, trackRecord, analyzeStock, screen, verdict };
+})();
+const __mod_chart = (() => {
+// Candlestick chart as an SVG string (no DOM), so it renders the same in the browser and in tests. Colors come
+// from CSS classes, which map to the page's theme tokens.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function niceTicks(min, max, count = 5) {
+  const span = max - min || Math.abs(max) || 1;
+  const raw = span / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+  const ticks = [];
+  for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) ticks.push(Number(v.toFixed(10)));
+  return ticks;
+}
+
+const fmtPrice = (v) => (v >= 1000 ? v.toFixed(0) : v >= 100 ? v.toFixed(1) : v.toFixed(2));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+// markers: [{ index, tone: 'good'|'bad'|'pending' }] in full-series indices.
+function renderChart(analysis, opts) {
+  const { bars, ctx } = analysis;
+  const width = opts.width;
+  const height = opts.height;
+  const n = Math.min(opts.bars, bars.length);
+  const from = bars.length - n;
+  const pad = { l: 8, r: 56, t: 12, b: 24 };
+  const volH = (height - pad.t - pad.b) * opts.volumeShare;
+  const priceH = height - pad.t - pad.b - volH - 8;
+  const step = (width - pad.l - pad.r) / n;
+  const view = bars.slice(from);
+  const overlays = [['ema', ctx.ema], ['sma-fast', ctx.smaFast], ['sma-slow', ctx.smaSlow]];
+  let lo = Math.min(...view.map((b) => b.low));
+  let hi = Math.max(...view.map((b) => b.high));
+  for (const [, s] of overlays) for (let i = from; i < bars.length; i++) if (s[i] != null) { lo = Math.min(lo, s[i]); hi = Math.max(hi, s[i]); }
+  const m = (hi - lo) * 0.06 || 1;
+  lo -= m;
+  hi += m;
+  const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * priceH;
+  const x = (i) => pad.l + (i - from + 0.5) * step;
+  const maxVol = Math.max(...view.map((b) => b.volume), 1);
+  const volTop = pad.t + priceH + 8;
+  const parts = [];
+  parts.push(`<svg class="chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(opts.label ?? 'Price chart')}" preserveAspectRatio="none">`);
+  for (const t of niceTicks(lo, hi)) {
+    parts.push(`<line class="grid" x1="${pad.l}" x2="${width - pad.r}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"/>`);
+    parts.push(`<text class="axis" x="${width - pad.r + 6}" y="${(y(t) + 4).toFixed(1)}">${fmtPrice(t)}</text>`);
+  }
+  let lastMonth = null;
+  view.forEach((b, k) => {
+    const mo = b.date.slice(0, 7);
+    if (mo !== lastMonth && k > 2) {
+      const xi = x(from + k).toFixed(1);
+      parts.push(`<line class="grid grid-v" x1="${xi}" x2="${xi}" y1="${pad.t}" y2="${height - pad.b}"/>`);
+      parts.push(`<text class="axis" x="${xi}" y="${height - 6}" text-anchor="middle">${MONTHS[Number(b.date.slice(5, 7)) - 1]}${b.date.slice(5, 7) === '01' ? ` ${b.date.slice(2, 4)}` : ''}</text>`);
+    }
+    lastMonth = mo;
+  });
+  const bodyW = Math.max(1, step * 0.62);
+  view.forEach((b, k) => {
+    const i = from + k;
+    const up = b.close >= b.open;
+    const cls = up ? 'up' : 'down';
+    const vh = (b.volume / maxVol) * volH;
+    parts.push(`<rect class="vol ${cls}" x="${(x(i) - bodyW / 2).toFixed(1)}" y="${(volTop + volH - vh).toFixed(1)}" width="${bodyW.toFixed(1)}" height="${vh.toFixed(1)}"/>`);
+    parts.push(`<line class="wick ${cls}" x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${y(b.high).toFixed(1)}" y2="${y(b.low).toFixed(1)}"/>`);
+    const top = y(Math.max(b.open, b.close));
+    const h = Math.max(1, Math.abs(y(b.open) - y(b.close)));
+    parts.push(`<rect class="body ${cls}" x="${(x(i) - bodyW / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${h.toFixed(1)}"/>`);
+  });
+  for (const [cls, s] of overlays) {
+    const pts = [];
+    for (let i = from; i < bars.length; i++) if (s[i] != null) pts.push(`${x(i).toFixed(1)},${y(s[i]).toFixed(1)}`);
+    if (pts.length > 1) parts.push(`<polyline class="line ${cls}" fill="none" points="${pts.join(' ')}"/>`);
+  }
+  for (const mk of opts.markers ?? []) {
+    if (mk.index < from) continue;
+    const cx = x(mk.index);
+    const cy = Math.min(y(bars[mk.index].low) + 10, pad.t + priceH - 2);
+    parts.push(`<path class="marker ${mk.tone}" d="M${cx.toFixed(1)} ${(cy - 6).toFixed(1)} l5 8 h-10 z"><title>${esc(mk.title ?? '')}</title></path>`);
+  }
+  const lastY = y(bars[bars.length - 1].close);
+  parts.push(`<rect class="last-tag" x="${width - pad.r + 2}" y="${(lastY - 9).toFixed(1)}" width="${pad.r - 4}" height="18" rx="3"/>`);
+  parts.push(`<text class="last-text" x="${width - pad.r + 6}" y="${(lastY + 4).toFixed(1)}">${fmtPrice(bars[bars.length - 1].close)}</text>`);
+  parts.push(`<line class="crosshair" x1="0" x2="0" y1="${pad.t}" y2="${height - pad.b}" visibility="hidden"/>`);
+  parts.push('</svg>');
+  return { svg: parts.join(''), from, step, padLeft: pad.l, width };
+}
+
+// Tiny trend line for table rows.
+function sparkline(closes, w = 96, h = 28) {
+  if (closes.length < 2) return '';
+  const lo = Math.min(...closes);
+  const hi = Math.max(...closes);
+  const pts = closes.map((c, i) => `${((i / (closes.length - 1)) * (w - 4) + 2).toFixed(1)},${(h - 3 - ((c - lo) / (hi - lo || 1)) * (h - 6)).toFixed(1)}`);
+  const cls = closes[closes.length - 1] >= closes[0] ? 'up' : 'down';
+  const [ex, ey] = pts[pts.length - 1].split(',');
+  return `<svg class="spark ${cls}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><polyline fill="none" points="${pts.join(' ')}"/><circle cx="${ex}" cy="${ey}" r="2.2"/></svg>`;
+}
+
+return { niceTicks, renderChart, sparkline };
+})();
+const __mod_watchlist = (() => {
+// Watchlist kept in the browser (localStorage), remembering the price and date each stock was added so the list
+// can show how it has moved since. Storage is injected so tests can use a fake, and every access is guarded:
+// private windows and blocked storage just mean the list doesn't persist.
+function createWatchlist(storage, key) {
+  let items = [];
+  try {
+    const raw = storage?.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) items = parsed.filter((x) => x && typeof x.symbol === 'string');
+  } catch { items = []; }
+  const save = () => { try { storage?.setItem(key, JSON.stringify(items)); } catch { /* not persisted */ } };
+  return {
+    list: () => items.map((x) => ({ ...x })),
+    has: (symbol) => items.some((x) => x.symbol === symbol),
+    add(symbol, price, date) {
+      if (items.some((x) => x.symbol === symbol)) return false;
+      items.push({ symbol, addedPrice: price, addedDate: date });
+      save();
+      return true;
+    },
+    remove(symbol) {
+      const before = items.length;
+      items = items.filter((x) => x.symbol !== symbol);
+      save();
+      return items.length < before;
+    },
+    toggle(symbol, price, date) {
+      return this.has(symbol) ? (this.remove(symbol), false) : this.add(symbol, price, date);
+    },
+  };
+}
+
+const sinceAdded = (item, lastPrice) => (item.addedPrice ? lastPrice / item.addedPrice - 1 : null);
+
+return { createWatchlist, sinceAdded };
+})();
+const __mod_proximity = (() => {
+// "Close to triggering": for each setup that can be seen coming, a score from 0 (far) to 1 (fires) and a plain
+// sentence saying what is still missing. Gaps and NR7 happen in a single session, so they can't be anticipated.
+const { setupById } = __mod_setups;
+const clamp = (v) => Math.max(0, Math.min(1, v));
+const ok = (...v) => v.every((x) => x != null && Number.isFinite(x));
+const p1 = (v) => `${(v * 100).toFixed(1)}%`;
+const ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+
+// Each returns { score, missing } or null when the setup can't be near (wrong regime, no history).
+const PROXIMITY = {
+  breakout(c, i, s, n) {
+    if (!ok(c.yearHigh[i], c.avgVolume[i])) return null;
+    const gap = c.yearHigh[i] / c.close[i] - 1;
+    const vol = `needs volume ${s.breakout.volumeMultiple}× average on the break`;
+    if (gap <= 0) return { score: 0.95, missing: `Above its 52-week high; ${vol} (today ${(c.volume[i] / c.avgVolume[i]).toFixed(1)}×)` };
+    return { score: clamp(1 - gap / n.breakoutPct) * 0.95, missing: `${p1(gap)} below its 52-week high of ${c.yearHigh[i].toFixed(2)}; ${vol}` };
+  },
+  goldenCross(c, i, s, n) {
+    if (!ok(c.smaFast[i], c.smaSlow[i], c.smaFast[i - 5], c.smaSlow[i - 5]) || c.smaFast[i] >= c.smaSlow[i]) return null;
+    const gap = 1 - c.smaFast[i] / c.smaSlow[i];
+    const closing = c.smaFast[i] - c.smaSlow[i] > c.smaFast[i - 5] - c.smaSlow[i - 5];
+    if (!closing) return null;
+    return { score: clamp(1 - gap / n.crossPct) * 0.95, missing: `50-day is ${p1(gap)} below the 200-day and closing in` };
+  },
+  pullback(c, i, s, n) {
+    const q = s.pullback;
+    if (!ok(c.smaFast[i], c.smaSlow[i], c.ema[i], c.rsi[i])) return null;
+    if (!(c.smaFast[i] > c.smaSlow[i] && c.close[i] > c.smaSlow[i])) return null;
+    const dist = c.close[i] / c.ema[i] - 1;
+    const over = Math.max(0, Math.abs(dist) - q.bandPct);
+    const rsiOff = c.rsi[i] > q.rsiMax ? c.rsi[i] - q.rsiMax : c.rsi[i] < q.rsiMin ? q.rsiMin - c.rsi[i] : 0;
+    const parts = [];
+    if (over > 0) parts.push(`${p1(Math.abs(dist))} ${dist > 0 ? 'above' : 'below'} the 20 EMA (needs within ${p1(q.bandPct)})`);
+    // Round away from the range, so a value just outside never prints as if it were inside.
+    const shown = c.rsi[i] > q.rsiMax ? Math.ceil(c.rsi[i] * 10) / 10 : Math.floor(c.rsi[i] * 10) / 10;
+    if (rsiOff > 0) parts.push(`RSI ${shown.toFixed(1)} (needs ${q.rsiMin}–${q.rsiMax})`);
+    const score = Math.min(clamp(1 - over / n.pullbackPct), clamp(1 - rsiOff / n.rsiPoints)) * 0.95;
+    return { score, missing: parts.join('; ') || 'In range' };
+  },
+  oversoldBounce(c, i, s, n) {
+    const level = s.oversoldBounce.level;
+    if (!ok(c.rsi[i]) || c.rsi[i] >= level) return null;
+    return { score: clamp(1 - (level - c.rsi[i]) / n.rsiPoints) * 0.95, missing: `RSI ${c.rsi[i].toFixed(0)}: oversold, needs a close that lifts it back above ${level}` };
+  },
+  squeeze(c, i, s, n) {
+    const p = s.squeeze.percentile;
+    if (!ok(c.bbRank[i]) || c.bbRank[i] <= p) return null;
+    const off = c.bbRank[i] - p;
+    return { score: clamp(1 - off / n.squeezePercentile) * 0.95, missing: `Band width at the ${ordinal(Math.ceil(c.bbRank[i] * 100))} percentile of ${s.squeeze.window} sessions (needs ${ordinal(Math.round(p * 100))} or lower)` };
+  },
+};
+
+const canAnticipate = (id) => id in PROXIMITY;
+
+// Score of one setup on bar i: 1 if it fires, the proximity score otherwise, 0 if it can't be near.
+function setupProximity(c, i, id, cfg) {
+  if (setupById(id).test(c, i, cfg.setups)) return { score: 1, missing: null };
+  const f = PROXIMITY[id];
+  return (f && f(c, i, cfg.setups, cfg.near)) || { score: 0, missing: null };
+}
+
+// Stocks close to meeting the whole selection but not meeting it yet. For "all", every setup has to be firing or
+// near (score = the weakest); for "any", the closest one counts.
+function nearTriggers(analyses, selection, filters, cfg) {
+  const ids = selection.ids.filter((id) => setupById(id));
+  if (!ids.length) return [];
+  const out = [];
+  for (const a of analyses) {
+    if (a.last < filters.minPrice || (a.dollarVolume ?? 0) < filters.minDollarVolume) continue;
+    const i = a.bars.length - 1;
+    const per = ids.map((id) => ({ id, ...setupProximity(a.ctx, i, id, cfg) }));
+    const firing = per.filter((p) => p.score >= 1);
+    const pending = per.filter((p) => p.score < 1);
+    if (selection.mode === 'all' ? pending.length === 0 : firing.length > 0) continue; // already a match
+    const score = selection.mode === 'all' ? Math.min(...per.map((p) => p.score)) : Math.max(...pending.map((p) => p.score));
+    if (score < cfg.near.minScore) continue;
+    const missing = (selection.mode === 'all' ? pending : pending.filter((p) => p.score === score)).map((p) => ({ id: p.id, text: p.missing }));
+    out.push({ symbol: a.symbol, analysis: a, score, missing });
+  }
+  return out.sort((x, y) => y.score - x.score || x.symbol.localeCompare(y.symbol));
+}
+
+return { PROXIMITY, canAnticipate, setupProximity, nearTriggers };
+})();
+const __mod_feed = (() => {
+// Daily price feed: parse the two keyless sources and pack/unpack the compact prices file the page loads.
+// Shared by scripts/fetch.mjs (Node) and the page (browser), so both read the same format.
+const r2 = (v) => Math.round(v * 10000) / 10000;
+
+// Yahoo v8 chart JSON -> bars. Rows with any missing price (halts, today's unfinished bar) are dropped.
+function parseYahoo(json) {
+  const res = json?.chart?.result?.[0];
+  if (!res?.timestamp) throw new Error(json?.chart?.error?.description ?? 'no chart data');
+  const q = res.indicators?.quote?.[0] ?? {};
+  const offset = res.meta?.gmtoffset ?? 0;
+  const bars = [];
+  res.timestamp.forEach((t, i) => {
+    const [open, high, low, close] = [q.open?.[i], q.high?.[i], q.low?.[i], q.close?.[i]];
+    if ([open, high, low, close].some((v) => v == null || !Number.isFinite(v))) return;
+    const date = new Date((t + offset) * 1000).toISOString().slice(0, 10);
+    bars.push({ date, open: r2(open), high: r2(high), low: r2(low), close: r2(close), volume: q.volume?.[i] ?? 0 });
+  });
+  const name = res.meta?.longName ?? res.meta?.shortName ?? null;
+  return { bars: dedupe(bars), name };
+}
+
+// Nasdaq historical JSON ("$356.27", "40,027,470", "11/13/2026", newest first) -> bars, oldest first.
+function parseNasdaq(json) {
+  const rows = json?.data?.tradesTable?.rows;
+  if (!Array.isArray(rows) || !rows.length) throw new Error(json?.status?.bCodeMessage?.[0]?.errorMessage ?? 'no historical rows');
+  const num = (s) => Number(String(s ?? '').replace(/[$,\s]/g, ''));
+  const bars = rows.map((row) => {
+    const [m, d, y] = String(row.date).split('/');
+    return { date: `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`, open: num(row.open), high: num(row.high), low: num(row.low), close: num(row.close), volume: num(row.volume) || 0 };
+  }).filter((b) => [b.open, b.high, b.low, b.close].every((v) => Number.isFinite(v) && v > 0));
+  return { bars: dedupe(bars.sort((a, b) => (a.date < b.date ? -1 : 1))), name: null };
+}
+
+function dedupe(bars) {
+  return bars.filter((b, i) => i === bars.length - 1 || b.date !== bars[i + 1].date); // keep the last of a date
+}
+
+// Compact file: bars as [date, o, h, l, c, v] arrays to keep the page light.
+function packPrices(stocks, meta) {
+  const out = { ...meta, stocks: {} };
+  for (const [sym, { bars, name, source, sector, industry }] of stocks) {
+    out.stocks[sym] = { name, source, ...(sector ? { sector } : {}), ...(industry ? { industry } : {}), bars: bars.map((b) => [b.date, b.open, b.high, b.low, b.close, b.volume]) };
+  }
+  return out;
+}
+
+function unpackPrices(file) {
+  if (!file || typeof file.stocks !== 'object') throw new Error('not a prices file');
+  const stocks = new Map();
+  const names = new Map();
+  const meta = new Map();
+  for (const [sym, s] of Object.entries(file.stocks)) {
+    if (!Array.isArray(s.bars) || s.bars.length < 2) continue;
+    stocks.set(sym, s.bars.map(([date, open, high, low, close, volume]) => ({ date, open, high, low, close, volume })));
+    if (s.name) names.set(sym, s.name);
+    meta.set(sym, { name: s.name ?? null, sector: s.sector ?? null, industry: s.industry ?? null });
+  }
+  return { stocks, names, meta };
+}
+
+const chunkFile = (n) => `bars/${String(n).padStart(2, '0')}.json`;
+
+// Nasdaq screener JSON -> [{ symbol, name, sector, industry, marketCap }] above the cutoffs, in Yahoo's spelling
+// (BRK/B -> BRK-B). Preferreds (^), warrants (.WS), units and rights are left out.
+function parseUniverse(json, { minMarketCap, minPrice }) {
+  const rows = json?.data?.rows;
+  if (!Array.isArray(rows) || !rows.length) throw new Error('no screener rows');
+  const num = (s) => Number(String(s ?? '').replace(/[$,%\s]/g, '')) || 0;
+  const seen = new Set();
+  const out = [];
+  for (const r of rows) {
+    const raw = String(r.symbol ?? '').trim();
+    if (!raw || /[\^]|\.WS|\.U$|\.R$/.test(raw)) continue;
+    if (num(r.marketCap) < minMarketCap || num(r.lastsale) < minPrice) continue;
+    const symbol = raw.replace(/[/.]/g, '-').toUpperCase();
+    if (seen.has(symbol)) continue;
+    seen.add(symbol);
+    out.push({ symbol, name: cleanName(r.name), sector: r.sector || null, industry: r.industry || null, marketCap: num(r.marketCap) });
+  }
+  return out.sort((a, b) => b.marketCap - a.marketCap);
+}
+
+// "Agilent Technologies Inc. Common Stock" -> "Agilent Technologies Inc."
+const cleanName = (n) => String(n ?? '').replace(/\s+(Common Stock|Class [A-Z] Common Stock|Ordinary Shares|American Depositary Shares).*$/i, '').trim() || null;
+
+// Stable chunk for a symbol, so the page knows which bars file to load without an index.
+function chunkOf(symbol, chunks) {
+  let h = 2166136261;
+  for (const ch of symbol) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h % chunks;
+}
+
+// Compact bars for the chart files: prices in cents, close as deltas, open/high/low relative to close,
+// volume in hundreds, dates as day gaps from the first date. About half the size of plain rows.
+function packBars(bars) {
+  const cents = (v) => Math.round(v * 100);
+  const day = (d) => Math.round(Date.parse(`${d}T00:00:00Z`) / 864e5);
+  const c = bars.map((b) => cents(b.close));
+  return {
+    d0: bars[0].date,
+    dd: bars.map((b, i) => (i ? day(b.date) - day(bars[i - 1].date) : 0)),
+    c: c.map((v, i) => (i ? v - c[i - 1] : v)),
+    o: bars.map((b, i) => cents(b.open) - c[i]),
+    h: bars.map((b, i) => cents(b.high) - c[i]),
+    l: bars.map((b, i) => cents(b.low) - c[i]),
+    v: bars.map((b) => Math.round(b.volume / 100)),
+  };
+}
+
+function unpackBars(p) {
+  const out = [];
+  let day = Math.round(Date.parse(`${p.d0}T00:00:00Z`) / 864e5);
+  let close = 0;
+  for (let i = 0; i < p.c.length; i++) {
+    day += p.dd[i];
+    close += p.c[i];
+    out.push({ date: new Date(day * 864e5).toISOString().slice(0, 10), open: (close + p.o[i]) / 100, high: (close + p.h[i]) / 100, low: (close + p.l[i]) / 100, close: close / 100, volume: p.v[i] * 100 });
+  }
+  return out;
+}
+
+return { parseYahoo, parseNasdaq, packPrices, unpackPrices, chunkFile, parseUniverse, cleanName, chunkOf, packBars, unpackBars };
+})();
+const __mod_summary = (() => {
+// Per-stock summary: everything the screen, near list, best-setup tab and watchlist need, without the price
+// history. The nightly job builds these for thousands of stocks; the page builds them itself for demo or CSV data.
+// Full bars are only loaded for the stock you open and for track records of multi-setup screens.
+const { SETUPS, combinedTest } = __mod_setups;
+const { analyzeStock, trackRecord, warmupBars } = __mod_screener;
+const { PROXIMITY, setupProximity } = __mod_proximity;
+const r4 = (v) => (v == null ? null : Math.round(v * 10000) / 10000);
+const slim = (r) => ({ count: r.count, winRate: r4(r.winRate), median: r4(r.median), best: r4(r.best), worst: r4(r.worst), baselineMedian: r4(r.baselineMedian), baselineWinRate: r4(r.baselineWinRate), edge: r4(r.edge), enough: r.enough, horizon: r.horizon });
+
+// Stored compactly: per horizon the any-day baseline once, then [count, winRate, median, best, worst] per setup.
+const pack = (r) => [r.count, r4(r.winRate), r4(r.median), r4(r.best), r4(r.worst)];
+function recordOf(row, h, id, cfg) {
+  const e = row.rec?.[h];
+  const p = e?.s?.[id];
+  if (!p) return null;
+  const [count, winRate, median, best, worst] = p;
+  const [baselineMedian, baselineWinRate] = e.base;
+  const edge = median != null && baselineMedian != null ? r4(median - baselineMedian) : null;
+  return { count, winRate, median, best, worst, baselineMedian, baselineWinRate, edge, enough: count >= cfg.trackRecord.minSamples, horizon: Number(h) };
+}
+
+function summarize(symbol, bars, cfg, meta = {}) {
+  const a = analyzeStock(symbol, bars, cfg);
+  const i = bars.length - 1;
+  const prox = {};
+  for (const id of Object.keys(PROXIMITY)) {
+    if (a.firing.includes(id)) continue;
+    const p = setupProximity(a.ctx, i, id, cfg);
+    if (p.score > 0) prox[id] = { score: r4(p.score), missing: p.missing };
+  }
+  const rec = {};
+  const best = {};
+  const history = bars.length > warmupBars(cfg);
+  for (const h of cfg.feed.horizons) {
+    const hc = { ...cfg, trackRecord: { ...cfg.trackRecord, horizonBars: h } };
+    best[h] = null;
+    if (!history) continue;
+    rec[h] = { base: null, s: {} };
+    let top = null;
+    for (const s of SETUPS) {
+      const r = trackRecord(a.ctx, s.test, hc);
+      rec[h].base ??= [r4(r.baselineMedian), r4(r.baselineWinRate)];
+      rec[h].s[s.id] = pack(r);
+      if (r.enough && r.edge > 0 && r.winRate >= cfg.leaderboard.minWinRate && (!top || r.edge > top.edge)) top = { id: s.id, edge: r.edge };
+    }
+    best[h] = top?.id ?? null;
+  }
+  return {
+    symbol,
+    name: meta.name ?? null,
+    sector: meta.sector ?? null,
+    industry: meta.industry ?? null,
+    last: a.last,
+    date: a.date,
+    changePct: r4(a.changePct),
+    dollarVolume: Math.round(a.dollarVolume ?? 0),
+    barCount: bars.length,
+    firing: a.firing,
+    prox,
+    rec,
+    best,
+    spark: bars.slice(-cfg.feed.sparkBars).map((b) => b.close),
+  };
+}
+
+const passes = (row, f) => row.last >= f.minPrice && row.dollarVolume >= f.minDollarVolume && (!f.sector || row.sector === f.sector);
+const fires = (row, ids, mode) => ids.length > 0 && (mode === 'any' ? ids.some((id) => row.firing.includes(id)) : ids.every((id) => row.firing.includes(id)));
+const score = (row, id) => (row.firing.includes(id) ? 1 : row.prox[id]?.score ?? 0);
+
+// Today's matches. A single-setup screen carries its precomputed record; a multi-setup record needs bars
+// (record: undefined until the page loads them).
+function matchRows(rows, selection, filters, h, cfg) {
+  const single = selection.ids.length === 1 ? selection.ids[0] : null;
+  return rows.filter((r) => passes(r, filters) && fires(r, selection.ids, selection.mode))
+    .map((r) => ({ row: r, record: single ? recordOf(r, h, single, cfg) : undefined }));
+}
+
+// Same rules as proximity.nearTriggers, from the summaries.
+function nearRows(rows, selection, filters, cfg) {
+  const ids = selection.ids;
+  if (!ids.length) return [];
+  const out = [];
+  for (const r of rows) {
+    if (!passes(r, filters) || fires(r, ids, selection.mode)) continue;
+    const per = ids.map((id) => ({ id, score: score(r, id) }));
+    const pending = per.filter((p) => p.score < 1);
+    const s = selection.mode === 'all' ? Math.min(...per.map((p) => p.score)) : Math.max(...pending.map((p) => p.score));
+    if (s < cfg.near.minScore) continue;
+    const missing = (selection.mode === 'all' ? pending : pending.filter((p) => p.score === s)).map((p) => ({ id: p.id, text: r.prox[p.id]?.missing ?? '' }));
+    out.push({ row: r, score: s, missing });
+  }
+  return out.sort((x, y) => y.score - x.score || x.row.symbol.localeCompare(y.row.symbol));
+}
+
+function bestRows(rows, filters, h, cfg) {
+  const tally = Object.fromEntries(SETUPS.map((s) => [s.id, 0]));
+  const ranked = [];
+  const none = [];
+  for (const r of rows) {
+    if (!passes(r, filters)) continue;
+    const id = r.best?.[h];
+    if (!id) { none.push(r); continue; }
+    tally[id]++;
+    ranked.push({ row: r, id, record: recordOf(r, h, id, cfg), today: score(r, id), missing: r.prox[id]?.missing ?? null });
+  }
+  ranked.sort((x, y) => y.record.edge - x.record.edge || x.row.symbol.localeCompare(y.row.symbol));
+  return { ranked, none, tally };
+}
+
+// Track record of a multi-setup screen, from full bars.
+function comboRecord(bars, selection, cfg) {
+  if (bars.length <= warmupBars(cfg)) return null;
+  const a = analyzeStock('', bars, cfg);
+  return slim(trackRecord(a.ctx, combinedTest(selection.ids, selection.mode), cfg));
+}
+
+const sectorsOf = (rows) => [...new Set(rows.map((r) => r.sector).filter(Boolean))].sort();
+
+return { recordOf, summarize, matchRows, nearRows, bestRows, comboRecord, sectorsOf };
+})();
+const __mod_app = (() => {
+// Browser glue: state, rendering and events. All math lives in the other modules.
+// Every data source becomes a "universe": one summary row per stock (src/summary.mjs) plus getBars(symbol) for
+// the full history, which is only needed for the chart and for multi-setup track records. Nightly data arrives
+// already summarized (data/site/), so thousands of stocks load as fast as twenty.
+const { CONFIG } = __mod_config;
+const { SETUPS, setupById, combinedTest } = __mod_setups;
+const { parseCsv, symbolFromFilename } = __mod_csv;
+const { demoStocks, DEMO_UNIVERSE } = __mod_demo_data;
+const { analyzeStock, trackRecord, verdict, warmupBars } = __mod_screener;
+const { renderChart, sparkline } = __mod_chart;
+const { createWatchlist, sinceAdded } = __mod_watchlist;
+const { canAnticipate } = __mod_proximity;
+const { unpackPrices, unpackBars, chunkOf, chunkFile } = __mod_feed;
+const { summarize, matchRows, nearRows, bestRows, recordOf, sectorsOf } = __mod_summary;
+const cfg = structuredClone(CONFIG);
+const $ = (sel) => document.querySelector(sel);
+const html = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const pct = (v, digits = 1) => (v == null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toFixed(digits)}%`);
+const money = (v) => (v >= 1e9 ? `$${(v / 1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${(v / 1e3).toFixed(0)}K`);
+const price = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const prettyDate = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const signClass = (v) => (v > 0 ? 'pos' : v < 0 ? 'neg' : '');
+const SITE = cfg.feed.siteDir.replace(/^.*?data\//, 'data/'); // relative to the page
+const SOURCE_NAMES = { yahoo: 'Yahoo Finance', nasdaq: 'Nasdaq' };
+
+let storage = null;
+try { storage = window.localStorage; } catch { storage = null; }
+const watchlist = createWatchlist(storage, cfg.storageKey);
+
+const state = {
+  universe: null, // { kind, label, rows, bySym, getBars }
+  feedUniverse: null, // kept so "Back to daily prices" works after viewing the demo
+  selection: { ids: ['pullback'], mode: 'all' },
+  filters: { ...cfg.filters, sector: '' },
+  tab: 'matches',
+  focus: null,
+  chartBars: cfg.chart.defaultBars,
+  matches: [],
+  near: [],
+  limit: cfg.ui.pageSize,
+  combo: new Map(), // `${symbol}|${screen key}|${h}` -> record, for multi-setup screens
+};
+
+const h = () => cfg.trackRecord.horizonBars;
+const screenKey = () => `${state.selection.mode}:${[...state.selection.ids].sort().join('+')}`;
+
+// ---------- data sources ----------
+
+function memoryUniverse(stocks, meta, kind, label) {
+  const rows = [];
+  const bars = new Map();
+  for (const [sym, b] of stocks) {
+    if (b.length < 2) continue;
+    bars.set(sym, b);
+    rows.push(summarize(sym, b, cfg, meta.get(sym) ?? {}));
+  }
+  return { kind, label, rows, bySym: new Map(rows.map((r) => [r.symbol, r])), getBars: async (sym) => bars.get(sym) ?? null };
+}
+
+function siteUniverse(summary) {
+  const chunks = new Map();
+  const getBars = async (sym) => {
+    const n = chunkOf(sym, summary.barChunks);
+    if (!chunks.has(n)) {
+      chunks.set(n, fetch(`${SITE}/${chunkFile(n)}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+    }
+    const packed = (await chunks.get(n))[sym];
+    return packed ? unpackBars(packed) : null;
+  };
+  const when = summary.fetchedAt ? new Date(summary.fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+  const from = (summary.sources ?? []).map((x) => SOURCE_NAMES[x] ?? x).join(' + ') || 'fetched';
+  return { kind: 'feed', label: `Daily prices · ${from}${when ? ` · fetched ${when}` : ''}`, rows: summary.rows, bySym: new Map(summary.rows.map((r) => [r.symbol, r])), getBars };
+}
+
+function pricesUniverse(file) {
+  const { stocks, meta } = unpackPrices(file);
+  if (!stocks.size) throw new Error('prices file has no stocks');
+  const when = file.fetchedAt ? new Date(file.fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+  const from = (file.sources ?? []).map((x) => SOURCE_NAMES[x] ?? x).join(' + ') || 'fetched';
+  return memoryUniverse(stocks, meta, 'feed', `Daily prices · ${from}${when ? ` · fetched ${when}` : ''}`);
+}
+
+function use(universe) {
+  state.universe = universe;
+  if (universe.kind === 'feed') state.feedUniverse = universe;
+  state.combo.clear();
+  state.focus = null;
+  state.limit = cfg.ui.pageSize;
+  if (state.filters.sector && !sectorsOf(universe.rows).includes(state.filters.sector)) state.filters.sector = '';
+  refresh();
+}
+
+function loadDemo() {
+  const meta = new Map(DEMO_UNIVERSE.map((d) => [d.symbol, { name: d.name }]));
+  use(memoryUniverse(demoStocks(cfg), meta, 'demo', 'Demo data'));
+}
+
+// Nightly summary first, then a prices file (embedded by the build, or next to the page), else the demo.
+async function loadInitial() {
+  // Snapshot builds say there is nothing to fetch, so they never log a failed request.
+  const canFetch = location.protocol.startsWith('http') && document.querySelector('meta[name="screener-data"]')?.content !== 'none';
+  if (canFetch) {
+    try {
+      const res = await fetch(`${SITE}/summary.json`, { cache: 'no-store' });
+      if (res.ok) { use(siteUniverse(await res.json())); return; }
+    } catch { /* no nightly summary */ }
+  }
+  const embedded = document.getElementById('prices-data');
+  if (embedded) {
+    try { use(pricesUniverse(JSON.parse(embedded.textContent))); return; } catch { /* fall through */ }
+  }
+  if (canFetch) {
+    try {
+      const res = await fetch('data/prices.json', { cache: 'no-store' });
+      if (res.ok) { use(pricesUniverse(await res.json())); return; }
+    } catch { /* no prices file */ }
+  }
+  loadDemo();
+}
+
+// ---------- screening ----------
+
+function refresh() {
+  const u = state.universe;
+  if (!u) return;
+  state.matches = matchRows(u.rows, state.selection, state.filters, h(), cfg);
+  state.near = nearRows(u.rows, state.selection, state.filters, cfg);
+  const sortKey = (m) => (m.record?.enough ? m.record.edge : -Infinity);
+  state.matches.sort((x, y) => sortKey(y) - sortKey(x) || x.row.symbol.localeCompare(y.row.symbol));
+  const watched = watchlist.list().map((w) => w.symbol).filter((sym) => u.bySym.has(sym));
+  if (state.tab === 'watch' && watched.length && !watched.includes(state.focus)) state.focus = watched[0];
+  if (!state.focus || !u.bySym.has(state.focus)) state.focus = state.matches[0]?.row.symbol ?? state.near[0]?.row.symbol ?? u.rows[0]?.symbol ?? null;
+  renderSource();
+  renderSetups();
+  renderSectors();
+  renderTabs();
+  renderTable();
+  renderDetail();
+  if (state.selection.ids.length > 1) fillComboRecords();
+}
+
+// Multi-setup track records need full history; load it for the first rows shown, then re-render once.
+let comboRun = 0;
+async function fillComboRecords() {
+  const run = ++comboRun;
+  const key = screenKey();
+  const want = [...state.matches.slice(0, cfg.ui.comboRecords).map((m) => m.row), ...state.near.slice(0, cfg.ui.comboRecords).map((n) => n.row)];
+  let changed = false;
+  for (const row of want) {
+    const k = `${row.symbol}|${key}|${h()}`;
+    if (state.combo.has(k)) continue;
+    const bars = await state.universe.getBars(row.symbol);
+    if (run !== comboRun) return;
+    state.combo.set(k, bars && bars.length > warmupBars(cfg) ? trackRecord(analyzeStock(row.symbol, bars, cfg).ctx, combinedTest(state.selection.ids, state.selection.mode), cfg) : null);
+    changed = true;
+  }
+  if (changed && run === comboRun) {
+    for (const m of state.matches) m.record = state.combo.get(`${m.row.symbol}|${key}|${h()}`);
+    const sortKey = (m) => (m.record?.enough ? m.record.edge : -Infinity);
+    state.matches.sort((x, y) => sortKey(y) - sortKey(x) || x.row.symbol.localeCompare(y.row.symbol));
+    renderTable();
+  }
+}
+
+// Record of the current screen on one stock: precomputed for one setup, loaded for several.
+function screenRecord(row) {
+  if (state.selection.ids.length === 1) return recordOf(row, h(), state.selection.ids[0], cfg);
+  const k = `${row.symbol}|${screenKey()}|${h()}`;
+  return state.combo.has(k) ? state.combo.get(k) : undefined;
+}
+
+// ---------- rendering ----------
+
+function renderSource() {
+  const u = state.universe;
+  const demo = u.kind === 'demo';
+  const asOf = u.rows.reduce((m, r) => (r.date > m ? r.date : m), '');
+  $('#source').innerHTML = `<span class="pill ${demo ? 'pill-demo' : 'pill-live'}">${demo ? 'Demo data · synthetic prices' : html(u.label)}</span>
+    <span class="muted">${u.rows.length.toLocaleString('en-US')} stocks${asOf ? ` · as of ${prettyDate(asOf)}` : ''}</span>`;
+  $('#load-demo').hidden = demo;
+  $('#load-feed').hidden = !state.feedUniverse || u.kind === 'feed';
+}
+
+function renderSetups() {
+  const rows = state.universe.rows.filter((r) => r.last >= state.filters.minPrice && r.dollarVolume >= state.filters.minDollarVolume && (!state.filters.sector || r.sector === state.filters.sector));
+  const counts = Object.fromEntries(SETUPS.map((s) => [s.id, rows.filter((r) => r.firing.includes(s.id)).length]));
+  const nearCounts = Object.fromEntries(SETUPS.map((s) => [s.id, canAnticipate(s.id) ? nearRows(rows, { ids: [s.id], mode: 'all' }, { minPrice: 0, minDollarVolume: 0 }, cfg).length : null]));
+  $('#setup-list').innerHTML = SETUPS.map((s) => `
+    <label class="setup ${state.selection.ids.includes(s.id) ? 'on' : ''}">
+      <input type="checkbox" id="setup-${s.id}" value="${s.id}" ${state.selection.ids.includes(s.id) ? 'checked' : ''}>
+      <span class="setup-text"><span class="setup-name">${s.name}<span class="count" title="Stocks where this fires today${nearCounts[s.id] != null ? ', and how many are close' : ''}">${counts[s.id]}${nearCounts[s.id] ? ` <span class="near-count">+${nearCounts[s.id]} near</span>` : ''}</span></span>
+      <span class="setup-sum">${s.summary}</span></span>
+    </label>`).join('');
+  document.querySelectorAll('input[name="mode"]').forEach((r) => { r.checked = r.value === state.selection.mode; });
+}
+
+function renderSectors() {
+  const sectors = sectorsOf(state.universe.rows);
+  $('#sector-field').hidden = sectors.length === 0;
+  $('#sector').innerHTML = `<option value="">All sectors</option>${sectors.map((s) => `<option value="${html(s)}" ${s === state.filters.sector ? 'selected' : ''}>${html(s)}</option>`).join('')}`;
+}
+
+function renderTabs() {
+  $('#tab-matches').textContent = `Matches (${state.matches.length.toLocaleString('en-US')})`;
+  $('#tab-watch').textContent = `Watchlist (${watchlist.list().length})`;
+  for (const t of ['matches', 'best', 'watch']) $(`#tab-${t}`).setAttribute('aria-selected', String(state.tab === t));
+}
+
+const chips = (ids, highlight = []) => ids.map((id) => `<span class="chip ${highlight.includes(id) ? 'chip-on' : ''}">${setupById(id).name}</span>`).join('') || '<span class="muted">None today</span>';
+const meter = (score) => `<span class="meter" role="img" aria-label="${Math.round(score * 100)}% of the way"><span style="width:${Math.round(score * 100)}%"></span></span>`;
+
+function recordCell(r) {
+  if (r === undefined) return '<span class="muted">Loading track record…</span>';
+  const v = verdict(r);
+  if (!r || !r.count) return `<span class="verdict v-${v.tone}">${v.label}</span>`;
+  return `<span class="verdict v-${v.tone}">${v.label}</span>
+    <span class="rec">${r.count}× · ${Math.round(r.winRate * 100)}% up · median ${pct(r.median)} in ${r.horizon}d <span class="muted">vs ${pct(r.baselineMedian)} any day</span></span>`;
+}
+
+function starButton(row) {
+  const on = watchlist.has(row.symbol);
+  return `<button class="star ${on ? 'on' : ''}" data-star="${html(row.symbol)}" aria-pressed="${on}" aria-label="${on ? 'Remove' : 'Add'} ${html(row.symbol)} ${on ? 'from' : 'to'} watchlist">${on ? '★' : '☆'}</button>`;
+}
+
+const symbolCell = (row) => `<span class="sym">${html(row.symbol)}</span>${row.name ? `<span class="co">${html(row.name)}</span>` : ''}`;
+const sel = (row) => (row.symbol === state.focus ? 'sel' : '');
+const more = (shown, total) => (total > shown ? `<button class="btn more" type="button" data-more>Show ${Math.min(cfg.ui.pageSize, total - shown)} more of ${(total - shown).toLocaleString('en-US')}</button>` : '');
+
+function renderTable() {
+  const wrap = $('#table');
+  if (state.tab === 'best') { wrap.innerHTML = bestSection(); return; }
+  if (state.tab === 'watch') { wrap.innerHTML = watchSection(); return; }
+  if (!state.selection.ids.length) { wrap.innerHTML = '<p class="empty">Pick one or more setups on the left to screen for them.</p>'; return; }
+  const shown = state.matches.slice(0, state.limit);
+  const matches = !state.matches.length
+    ? `<p class="empty">No stock meets ${state.selection.mode === 'all' ? 'all of these setups' : 'any of these setups'} today. Try <b>Any</b> instead of <b>All</b>, fewer setups, or lower filters.</p>`
+    : `<table><thead><tr><th></th><th>Stock</th><th class="hide-sm">Last ${cfg.feed.sparkBars}d</th><th class="num">Last</th><th class="num">Day</th><th class="hide-sm">Firing today</th><th>Track record of this screen on this stock</th></tr></thead><tbody>
+      ${shown.map(({ row, record }) => `<tr data-sym="${html(row.symbol)}" class="${sel(row)}" tabindex="0">
+        <td>${starButton(row)}</td><td>${symbolCell(row)}</td>
+        <td class="hide-sm">${sparkline(row.spark)}</td>
+        <td class="num">${price(row.last)}</td><td class="num ${signClass(row.changePct)}">${pct(row.changePct)}</td>
+        <td class="hide-sm">${chips(row.firing, state.selection.ids)}</td><td>${recordCell(record)}</td></tr>`).join('')}
+      </tbody></table>${more(shown.length, state.matches.length)}`;
+  wrap.innerHTML = matches + nearSection();
+}
+
+function nearSection() {
+  const many = state.selection.ids.length > 1;
+  const list = state.near.slice(0, cfg.ui.pageSize);
+  const head = `<div class="near-head"><h3>Close to triggering (${state.near.length.toLocaleString('en-US')})</h3><span class="muted">Not a match yet. The bar shows how close; the text says what's missing.</span></div>`;
+  if (!state.near.length) return `${head}<p class="empty">Nothing is close to this screen today.${state.selection.ids.every((id) => !canAnticipate(id)) ? ' Gaps and NR7 happen in one session, so they can\'t be seen coming.' : ''}</p>`;
+  return `${head}<table class="near"><thead><tr><th></th><th>Stock</th><th class="num">Last</th><th>How close</th><th>What's missing</th><th class="hide-sm">Track record here</th></tr></thead><tbody>
+    ${list.map((n) => `<tr data-sym="${html(n.row.symbol)}" class="${sel(n.row)}" tabindex="0"><td>${starButton(n.row)}</td><td>${symbolCell(n.row)}</td><td class="num">${price(n.row.last)}</td>
+        <td>${meter(n.score)}</td><td class="missing">${n.missing.map((m) => `<span>${many ? `<b>${setupById(m.id).name}:</b> ` : ''}${html(m.text)}</span>`).join('')}</td>
+        <td class="hide-sm">${recordCell(screenRecord(n.row))}</td></tr>`).join('')}</tbody></table>
+    ${state.near.length > list.length ? `<p class="none-note">Showing the closest ${list.length}.</p>` : ''}`;
+}
+
+function bestSection() {
+  const { ranked, none, tally } = bestRows(state.universe.rows, state.filters, h(), cfg);
+  const max = Math.max(1, ...Object.values(tally));
+  const winners = SETUPS.filter((x) => tally[x.id]).sort((x, y) => tally[y.id] - tally[x.id]);
+  const intro = `<div class="best-intro"><p class="lede">For each stock, the setup with the best track record on it: at least ${cfg.trackRecord.minSamples} past cases, up at least ${Math.round(cfg.leaderboard.minWinRate * 100)}% of the time after ${h()} sessions, and the biggest lead over any day. Then whether it is firing or close today.</p>
+    ${winners.length ? `<div class="tally" aria-label="How many stocks each setup is best on">${winners.map((x) => `<div class="tally-row"><span>${x.name}</span><span class="tally-bar"><span style="width:${(tally[x.id] / max) * 100}%"></span></span><span class="num">${tally[x.id].toLocaleString('en-US')}</span></div>`).join('')}</div>` : ''}</div>`;
+  if (!ranked.length) return `${intro}<p class="empty">No setup has beaten any day on these stocks yet. Longer history (2+ years) gives more past cases.</p>`;
+  const todayCell = (r) => (r.today >= 1 ? '<span class="chip chip-on">Firing today</span>'
+    : r.today >= cfg.near.minScore ? `<span class="closest">${meter(r.today)}<span>${html(r.missing ?? '')}</span></span>`
+    : `<span class="muted">${canAnticipate(r.id) ? 'Not close' : 'Fires in one session'}</span>`);
+  const shown = ranked.slice(0, state.limit);
+  return `${intro}<table><thead><tr><th></th><th>Stock</th><th>Best setup here</th><th class="num">Cases</th><th class="num">Up after ${h()}d</th><th class="num">Median vs any day</th><th>Today</th></tr></thead><tbody>
+    ${shown.map((r) => `<tr data-sym="${html(r.row.symbol)}" class="${sel(r.row)}" tabindex="0"><td>${starButton(r.row)}</td><td>${symbolCell(r.row)}</td>
+        <td><b>${setupById(r.id).name}</b> <button class="link" type="button" data-screen="${r.id}">Screen for it</button></td>
+        <td class="num">${r.record.count}</td><td class="num">${Math.round(r.record.winRate * 100)}%</td>
+        <td class="num"><span class="${signClass(r.record.median)}">${pct(r.record.median)}</span> <span class="muted">vs ${pct(r.record.baselineMedian)}</span></td><td>${todayCell(r)}</td></tr>`).join('')}</tbody></table>
+    ${more(shown.length, ranked.length)}
+    ${none.length ? `<p class="none-note">No setup has beaten any day on ${none.length.toLocaleString('en-US')} ${none.length === 1 ? 'stock' : 'stocks'}${none.length <= 30 ? `: ${none.map((r) => html(r.symbol)).join(', ')}` : ''}.</p>` : ''}`;
+}
+
+function closestCell(row) {
+  let best = null;
+  for (const [id, p] of Object.entries(row.prox)) if (p.score >= cfg.near.minScore && (!best || p.score > best.score)) best = { ...p, id };
+  return best ? `<span class="closest">${meter(best.score)}<span><b>${setupById(best.id).name}</b> · ${html(best.missing)}</span></span>` : '<span class="muted">Nothing close</span>';
+}
+
+function watchSection() {
+  const items = watchlist.list();
+  if (!items.length) return '<p class="empty">Your watchlist is empty. Tap ☆ next to any stock to keep it here, with the price you added it at.</p>';
+  return `<table><thead><tr><th></th><th>Stock</th><th class="hide-sm">Last ${cfg.feed.sparkBars}d</th><th class="num">Last</th><th class="num">Day</th><th class="num">Since added</th><th>Firing today</th><th>Closest to firing</th></tr></thead><tbody>
+    ${items.map((it) => {
+      const row = state.universe.bySym.get(it.symbol);
+      if (!row) return `<tr><td><button class="star on" data-star="${html(it.symbol)}" aria-label="Remove ${html(it.symbol)} from watchlist">★</button></td><td><span class="sym">${html(it.symbol)}</span></td><td colspan="6" class="muted">Not in the loaded data.</td></tr>`;
+      const since = sinceAdded(it, row.last);
+      return `<tr data-sym="${html(row.symbol)}" class="${sel(row)}" tabindex="0">
+        <td>${starButton(row)}</td><td>${symbolCell(row)}</td><td class="hide-sm">${sparkline(row.spark)}</td>
+        <td class="num">${price(row.last)}</td><td class="num ${signClass(row.changePct)}">${pct(row.changePct)}</td>
+        <td class="num ${signClass(since)}" title="Added at ${price(it.addedPrice)} on ${prettyDate(it.addedDate)}">${pct(since)}</td>
+        <td>${chips(row.firing, state.selection.ids)}</td><td>${closestCell(row)}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+let detailRun = 0;
+async function renderDetail() {
+  const row = state.universe?.bySym.get(state.focus);
+  const panel = $('#detail');
+  if (!row) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const run = ++detailRun;
+  const meta = [row.sector, row.industry].filter(Boolean).map(html).join(' · ');
+  $('#detail-head').innerHTML = `<div><h2>${html(row.symbol)} ${row.name ? `<span class="co">${html(row.name)}</span>` : ''}</h2>
+    <div class="quote"><b>${price(row.last)}</b> <span class="${signClass(row.changePct)}">${pct(row.changePct, 2)}</span> <span class="muted">${prettyDate(row.date)} · avg ${money(row.dollarVolume)}/day traded${meta ? ` · ${meta}` : ''}</span></div></div>
+    ${starButton(row)}`;
+  document.querySelectorAll('[data-range]').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.range) === state.chartBars)));
+  renderRecordTable(row, null);
+  $('#readout').textContent = '';
+  $('#chart').innerHTML = '<p class="empty">Loading chart…</p>';
+  const bars = await state.universe.getBars(row.symbol);
+  if (run !== detailRun) return;
+  if (!bars) { $('#chart').innerHTML = '<p class="empty">Price history for this stock could not be loaded.</p>'; return; }
+  const a = analyzeStock(row.symbol, bars, cfg);
+  const ids = state.selection.ids;
+  const combo = ids.length && bars.length > warmupBars(cfg) ? trackRecord(a.ctx, combinedTest(ids, state.selection.mode), cfg) : null;
+  drawChart(a, combo);
+  renderRecordTable(row, combo, a);
+}
+
+function renderRecordTable(row, combo, a = null) {
+  const ids = state.selection.ids;
+  const enough = row.rec?.[h()];
+  if (!enough) {
+    $('#record').innerHTML = `<p class="empty">Needs more than ${warmupBars(cfg)} sessions of history for a track record; this stock has ${row.barCount}.</p>`;
+    return;
+  }
+  const best = row.best?.[h()];
+  const recs = SETUPS.map((s) => ({ s, r: recordOf(row, h(), s.id, cfg) }));
+  const base = recs[0].r;
+  $('#record').innerHTML = `<p class="lede">Every past time each setup fired on <b>${html(row.symbol)}</b>, and where the stock was ${h()} sessions later. "Any day" is the typical ${h()}-session move from a random day, the bar a setup has to beat.</p>
+    <div class="scroll"><table class="rec-table"><thead><tr><th>Setup</th><th class="num">Cases</th><th class="num">Up after ${h()}d</th><th class="num">Median</th><th class="num">Best / worst</th><th>Verdict</th></tr></thead><tbody>
+    ${ids.length ? `<tr class="combo"><td>Your screen (${ids.map((id) => setupById(id).name).join(state.selection.mode === 'all' ? ' + ' : ' or ')})</td>${combo ? recCells(combo) : '<td colspan="5" class="muted">Loading…</td>'}</tr>` : ''}
+    ${recs.map(({ s, r }) => `<tr class="${ids.includes(s.id) ? 'in-screen' : ''}"><td>${s.name}${best === s.id ? ' <span class="chip chip-best">best here</span>' : ''}${row.firing.includes(s.id) ? ' <span class="chip chip-on">today</span>' : ''}</td>${recCells(r)}</tr>`).join('')}
+    <tr class="base"><td>Any day</td><td class="num">–</td><td class="num">${base.baselineWinRate == null ? '–' : `${Math.round(base.baselineWinRate * 100)}%`}</td><td class="num">${pct(base.baselineMedian)}</td><td class="num">–</td><td></td></tr>
+    </tbody></table></div>
+    ${combo && a && combo.outcomes.length ? `<h3>Past cases of your screen</h3><ol class="cases">${combo.outcomes.slice().reverse().map((o) => `<li><span>${prettyDate(a.bars[o.index].date)}</span><span class="num ${signClass(o.ret)}">${pct(o.ret)}</span></li>`).join('')}</ol>` : ''}`;
+}
+
+function recCells(r) {
+  const v = verdict(r);
+  if (!r || !r.count) return `<td class="num">0</td><td class="num">–</td><td class="num">–</td><td class="num">–</td><td><span class="verdict v-${v.tone}">${r ? 'Never fired' : v.label}</span></td>`;
+  return `<td class="num">${r.count}</td><td class="num">${Math.round(r.winRate * 100)}%</td><td class="num ${signClass(r.median)}">${pct(r.median)}</td>
+    <td class="num"><span class="${signClass(r.best)}">${pct(r.best)}</span> / <span class="${signClass(r.worst)}">${pct(r.worst)}</span></td><td><span class="verdict v-${v.tone}">${v.label}</span></td>`;
+}
+
+let chartLayout = null;
+function drawChart(a, combo) {
+  const box = $('#chart');
+  const width = Math.max(320, Math.floor(box.clientWidth || cfg.chart.width));
+  const height = width < 560 ? 280 : cfg.chart.height;
+  const markers = (combo?.triggers ?? []).map((i) => {
+    const o = combo.outcomes.find((x) => x.index === i);
+    return { index: i, tone: !o ? 'pending' : o.ret > 0 ? 'good' : 'bad', title: `${a.bars[i].date}: screen fired${o ? `, ${pct(o.ret)} after ${combo.horizon} sessions` : ', outcome still open'}` };
+  });
+  const out = renderChart(a, { ...cfg.chart, width, height, bars: state.chartBars, markers, label: `${a.symbol} daily candles with 20 EMA, 50 and 200 SMA` });
+  box.innerHTML = out.svg;
+  chartLayout = { ...out, a };
+  showBar(a.bars.length - 1);
+}
+
+function showBar(i) {
+  if (!chartLayout) return;
+  const { a } = chartLayout;
+  const b = a.bars[i];
+  const up = b.close >= b.open;
+  $('#readout').innerHTML = `<span>${prettyDate(b.date)}</span><span>O ${price(b.open)}</span><span>H ${price(b.high)}</span><span>L ${price(b.low)}</span>
+    <span class="${up ? 'pos' : 'neg'}">C ${price(b.close)}</span><span>Vol ${(b.volume / 1e6).toFixed(2)}M</span>${a.ctx.rsi[i] != null ? `<span>RSI ${a.ctx.rsi[i].toFixed(0)}</span>` : ''}`;
+}
+
+function onChartMove(e) {
+  const svg = $('#chart svg');
+  if (!chartLayout || !svg) return;
+  const rect = svg.getBoundingClientRect();
+  const px = ((e.clientX - rect.left) / rect.width) * chartLayout.width;
+  const k = Math.floor((px - chartLayout.padLeft) / chartLayout.step);
+  const i = Math.max(chartLayout.from, Math.min(chartLayout.a.bars.length - 1, chartLayout.from + k));
+  const line = svg.querySelector('.crosshair');
+  const cx = chartLayout.padLeft + (i - chartLayout.from + 0.5) * chartLayout.step;
+  line.setAttribute('x1', cx);
+  line.setAttribute('x2', cx);
+  line.setAttribute('visibility', 'visible');
+  showBar(i);
+}
+
+async function importFiles(files) {
+  const merged = new Map();
+  if (state.universe?.kind === 'csv') for (const r of state.universe.rows) merged.set(r.symbol, await state.universe.getBars(r.symbol));
+  const notes = [];
+  for (const f of files) {
+    try {
+      const { stocks, skipped } = parseCsv(await f.text(), symbolFromFilename(f.name));
+      for (const [sym, bars] of stocks) merged.set(sym, bars);
+      notes.push(`${f.name}: ${[...stocks.keys()].join(', ')}${skipped ? ` (${skipped} blank rows skipped)` : ''}`);
+    } catch (err) {
+      notes.push(`${f.name}: ${err.message}`);
+    }
+  }
+  $('#import-note').textContent = notes.join(' · ');
+  if (merged.size) use(memoryUniverse(merged, new Map(), 'csv', `Imported CSV · ${merged.size} ${merged.size === 1 ? 'stock' : 'stocks'}`));
+}
+
+// ---------- events ----------
+
+function focusRow(sym) {
+  state.focus = sym;
+  renderTable();
+  renderDetail();
+}
+
+function wire() {
+  $('#setup-list').addEventListener('change', (e) => {
+    const id = e.target.value;
+    state.selection.ids = e.target.checked ? [...state.selection.ids, id] : state.selection.ids.filter((x) => x !== id);
+    state.tab = 'matches';
+    state.limit = cfg.ui.pageSize;
+    refresh();
+  });
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', () => { state.selection.mode = r.value; refresh(); }));
+  $('#min-price').addEventListener('change', (e) => { state.filters.minPrice = Number(e.target.value) || 0; refresh(); });
+  $('#min-dv').addEventListener('change', (e) => { state.filters.minDollarVolume = Number(e.target.value) || 0; refresh(); });
+  $('#sector').addEventListener('change', (e) => { state.filters.sector = e.target.value; state.limit = cfg.ui.pageSize; refresh(); });
+  $('#horizon').addEventListener('change', (e) => { cfg.trackRecord.horizonBars = Number(e.target.value); refresh(); });
+  for (const t of ['matches', 'best', 'watch']) $(`#tab-${t}`).addEventListener('click', () => { state.tab = t; state.limit = cfg.ui.pageSize; refresh(); });
+  document.addEventListener('click', (e) => {
+    const star = e.target.closest('[data-star]');
+    if (star) {
+      const sym = star.dataset.star;
+      const row = state.universe.bySym.get(sym);
+      if (row) watchlist.toggle(sym, row.last, row.date); else watchlist.remove(sym);
+      refresh();
+      return;
+    }
+    const scr = e.target.closest('[data-screen]');
+    if (scr) {
+      const sym = scr.closest('tr[data-sym]')?.dataset.sym;
+      state.selection = { ids: [scr.dataset.screen], mode: 'all' };
+      state.tab = 'matches';
+      refresh();
+      if (sym) focusRow(sym);
+      return;
+    }
+    if (e.target.closest('[data-more]')) { state.limit += cfg.ui.pageSize; renderTable(); return; }
+    const row = e.target.closest('tr[data-sym]');
+    if (row) focusRow(row.dataset.sym);
+    const range = e.target.closest('[data-range]');
+    if (range) { state.chartBars = Number(range.dataset.range); renderDetail(); }
+  });
+  $('#table').addEventListener('keydown', (e) => {
+    const row = e.target.closest('tr[data-sym]');
+    if (row && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); focusRow(row.dataset.sym); }
+  });
+  $('#chart').addEventListener('pointermove', onChartMove);
+  $('#file').addEventListener('change', (e) => { if (e.target.files.length) importFiles([...e.target.files]); e.target.value = ''; });
+  $('#load-demo').addEventListener('click', loadDemo);
+  $('#load-feed').addEventListener('click', () => state.feedUniverse && use(state.feedUniverse));
+  document.addEventListener('dragover', (e) => { e.preventDefault(); document.body.classList.add('dragging'); });
+  document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dragging'); });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    document.body.classList.remove('dragging');
+    const files = [...(e.dataTransfer?.files ?? [])].filter((f) => /\.(csv|txt)$/i.test(f.name));
+    if (files.length) importFiles(files);
+  });
+  let t;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(renderDetail, 150); });
+  $('#min-price').value = state.filters.minPrice;
+  $('#min-dv').value = state.filters.minDollarVolume;
+  $('#horizon').innerHTML = cfg.feed.horizons.map((x) => `<option value="${x}">${x} sessions${x === 5 ? ' (1 week)' : x === 10 ? ' (2 weeks)' : x === 20 ? ' (1 month)' : ''}</option>`).join('');
+  $('#horizon').value = cfg.trackRecord.horizonBars;
+}
+
+wire();
+loadInitial();
+
+return {  };
+})();
+</script>
+</body>
+</html>
