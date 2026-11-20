@@ -1,7 +1,7 @@
 # Third-party notices
 
 Files in this folder are unmodified copies of the pinned versions below, checked against SHA-384
-hashes recorded when each was added (site_deps.lock.json in leftbrain847/index). The only edit:
+hashes recorded when each was added (site_deps.lock.json in leftbrain847/index_engine). The only edit:
 each fonts/*.css (Google's CSS for that page) points its font URLs at the copies in this folder.
 
 | Name | Version | License | Source |
