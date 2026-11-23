@@ -236,6 +236,14 @@ function twentyPrompt() {
   return `You help a solo developer pick work. They have 20 minutes. Their priority: severity first, then ${(S.category_order || []).join(" > ")}; overdue first. Queue:\n${q}\n\nPick 1-2 items that fit in 20 minutes with the most risk reduced. Say why in two sentences and give the exact phrase to tell Claude (e.g. "approve no-ci"). Plain text, under 90 words.`;
 }
 
+/* ---------- pinned ---------- */
+// Links J pins at the top of Now (index.yml config.pinned, filtered to https by build_artifact.pinned).
+function pinnedSection() {
+  const ps = D.pinned || [];
+  if (!ps.length) return "";
+  return `<h2>Pinned</h2>` + ps.map(p => `<div class="area"><span class="k">${esc(p.title)}</span><span class="v"><a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">Open</a>${p.note ? " · " + esc(p.note) : ""}</span></div>`).join("");
+}
+
 /* ---------- needs setup ---------- */
 // Repos the nightly refresh found that index.yml hasn't sorted (D.needs_setup, built by index.needs_setup).
 // Copy the line, ask Claude to suggest values, or save it for Claude's next "sync my command center" (setup/<repo>).
@@ -304,7 +312,7 @@ V.now = () => {
   const m = D.metrics[D.metrics.length - 1] || {}, q = queue(), gs = groups(q);
   const rv = review(), pd = pending();
   const overdue = q.filter(f => f.overdue).length;
-  let h = setupSection() + `<h2>Today</h2><div class="tiles">${tile("Queue", "queue", q.length)}${tile("Critical", "critical", m.critical ?? 0, "down", +m.critical > 0)}${tile("High", "high", m.high ?? 0)}${tile("Overdue", "overdue", overdue, "down", overdue > 0)}${tile("Resolved 7d", "resolved_7d", m.resolved_7d ?? 0, "up")}${tile("Avg score", "avg_score", m.avg_score ?? "—", "up")}</div>`;
+  let h = pinnedSection() + setupSection() + `<h2>Today</h2><div class="tiles">${tile("Queue", "queue", q.length)}${tile("Critical", "critical", m.critical ?? 0, "down", +m.critical > 0)}${tile("High", "high", m.high ?? 0)}${tile("Overdue", "overdue", overdue, "down", overdue > 0)}${tile("Resolved 7d", "resolved_7d", m.resolved_7d ?? 0, "up")}${tile("Avg score", "avg_score", m.avg_score ?? "—", "up")}</div>`;
   if (rv.length || pd.length) {
     h += `<h2>Waiting on you</h2>`;
     h += rv.map(f => `<div class="area"><span class="k">${esc(f.repo)}</span><span class="v">${f.pr ? `<a href="${esc(f.pr)}">Review PR #${esc(f.pr.split("/").pop())}</a>` : "Approved, PR not opened yet"} · ${esc(VERB[f.check] || f.title)}</span></div>`).join("");
